@@ -1,5 +1,7 @@
 # Design
 
+<p align="center"><img src="../assets/copylog-flow.svg" alt="Copy OSD Logs to File Share workflow: set hidden variables, validate environment and OSDisk, collect logs, create archive, upload via SMB, verify remote size, and clear variables" width="100%"></p>
+
 This utility uses these principles:
 
 - Keep the operational script focused on one task.

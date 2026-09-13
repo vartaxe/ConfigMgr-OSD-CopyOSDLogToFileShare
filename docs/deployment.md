@@ -2,6 +2,8 @@
 
 ## Recommended Task Sequence layout
 
+<p align="center"><img src="../assets/task-sequence-flow.svg" alt="ConfigMgr Task Sequence pattern: set variables, run packaged script, validate result, clear variables on success and failure" width="100%"></p>
+
 ```text
 Set variables
 Run Copy-OSDLogToFileShare.ps1
