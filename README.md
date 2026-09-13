@@ -11,6 +11,7 @@ Version **1.0.0 is pre-release**; live ConfigMgr, WinPE, and SMB validation is p
 ![CI](https://github.com/vartaxe/ConfigMgr-OSD-CopyOSDLogToFileShare/actions/workflows/ci.yml/badge.svg)
 ![PowerShell](https://img.shields.io/badge/Windows%20PowerShell-5.1-2671be)
 ![License](https://img.shields.io/badge/license-MIT-22c55e)
+[![Sponsor](https://img.shields.io/badge/sponsor-vartaxe-db61a2)](https://github.com/sponsors/vartaxe)
 
 ## Quick start
 
