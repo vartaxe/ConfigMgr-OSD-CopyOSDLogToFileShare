@@ -7,8 +7,11 @@ Current scope is **pre-release review of version 1.0.0**. Do not merge, tag, or 
 3. Run the [full validator](validation.md) without `-SkipChecksums`; optionally pass `-Tag v1.0.0` to check the proposed tag without creating it.
 4. Verify the manifest against the worktree, an extracted `git archive`, and a fresh checkout of the exact candidate commit. Keep verification artifacts outside the source root.
 5. Record static/unit results separately from pending [live scenarios](validation.md#pending-live-validation).
-6. Obtain maintainer review and explicit approval before any future merge, tag, or release. Complete live validation before claiming platform compatibility.
+6. Obtain maintainer review and explicit approval before any future merge, tag, or release; pushing a version tag now starts publication, so approval must come first. Complete live validation before claiming platform compatibility.
 
 Git's `* -text` attribute is intentional: checksums refer to exact stored bytes, not normalized text.
 Do not re-enable automatic line-ending conversion without changing and verifying the manifest strategy.
-CI has read-only contents permissions and validates tags; it does not publish releases.
+CI keeps read-only contents permission, validates tags, and does not publish releases.
+Publishing is a separate `.github/workflows/release.yml` workflow with `contents: write`, triggered only by a maintainer-pushed `v*.*.*` tag or manual dispatch.
+It re-runs the validator against the tagged revision with `-Tag`, then publishes a GitHub prerelease holding a `git archive` zip and its SHA-256 sidecar, using `--verify-tag` so a missing or mismatched tag fails.
+Publication does not change release status: v1.0.0 stays a pre-release candidate until live validation is complete.
