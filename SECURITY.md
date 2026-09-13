@@ -4,7 +4,7 @@
 
 Use [private GitHub security advisories](https://github.com/vartaxe/ConfigMgr-OSD-CopyOSDLogToFileShare/security/advisories/new) for vulnerabilities. Use GitHub Issues only for non-sensitive bugs and documentation issues. Do not publish unsanitized logs, ZIP archives, command lines, credentials, tokens, certificates, internal server names, or deployment policy data.
 
-Private vulnerability reporting is currently disabled; enabling it requires repository-owner action and remains pending.
+Private vulnerability reporting is enabled for this repository.
 If the private reporting form is unavailable, contact [Claudio Mendes](mailto:vartaxe@outlook.com) at vartaxe@outlook.com rather than opening a public issue.
 Start with a minimal description and arrange a private channel before sharing sensitive evidence.
 
