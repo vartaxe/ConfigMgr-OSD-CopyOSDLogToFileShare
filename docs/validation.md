@@ -4,7 +4,7 @@ Run `powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\build\Invoke-Vali
 
 ## Prerequisites and scope
 
-Install Pester 5 or later and PSScriptAnalyzer in the validation environment. CI installs Pester 5.5+ within major version 5 and PSScriptAnalyzer 1.22+.
+Install Pester 5 or later and PSScriptAnalyzer in the validation environment. CI pins exact module versions, Pester 5.7.1 and PSScriptAnalyzer 1.25.0, so an upstream module release cannot silently change validation results.
 The validator explicitly requires Windows PowerShell 5.1 and imports Pester with minimum version 5.
 It analyzes `Scripts`, `Tests`, and `build`, checks `VERSION` against the production script's literal version assignment, and verifies `CHECKSUMS.txt`.
 Parser errors, analyzer warnings/errors, missing modules, failed Pester discovery, zero discovered tests, failed tests, and manifest/version errors return a nonzero process exit.
@@ -36,6 +36,7 @@ The canonical `.github/workflows/ci.yml` workflow preserves both required branch
 `CI validation` runs the full Windows PowerShell 5.1 validator. `PowerShell validation` is a lightweight dependent status job, not a second validation run.
 It passes only when `CI validation` succeeds and fails if that job fails, is cancelled, or is skipped. Its `always()` condition prevents a failed dependency from silently skipping the status job.
 Keep both check names while branch protection requires them; deleting or renaming a required check leaves pull requests blocked.
+`CI validation` checks out without persisted credentials and derives `-Tag` from `GITHUB_REF` on tag pushes, so tag and version agreement is verified inside the same job rather than a separate workflow.
 
 ## Pending live validation
 

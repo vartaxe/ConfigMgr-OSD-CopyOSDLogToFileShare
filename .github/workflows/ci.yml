@@ -11,13 +11,21 @@ jobs:
     runs-on: windows-2022
     steps:
       - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
       - name: Validate with Windows PowerShell 5.1
         shell: powershell
         run: |
-          Set-PSRepository PSGallery -InstallationPolicy Trusted
-          Install-Module Pester -MinimumVersion 5.5.0 -MaximumVersion 5.99.99 -Scope CurrentUser -Force -SkipPublisherCheck
-          Install-Module PSScriptAnalyzer -MinimumVersion 1.22.0 -Scope CurrentUser -Force
-          .\build\Invoke-Validation.ps1
+          $ErrorActionPreference = 'Stop'
+          Install-Module Pester -RequiredVersion '5.7.1' -Repository PSGallery -Scope CurrentUser -Force -SkipPublisherCheck
+          Install-Module PSScriptAnalyzer -RequiredVersion '1.25.0' -Repository PSGallery -Scope CurrentUser -Force
+          Import-Module Pester -RequiredVersion '5.7.1' -Force
+          Import-Module PSScriptAnalyzer -RequiredVersion '1.25.0' -Force
+          $ValidationParameters = @{}
+          if ($env:GITHUB_REF -like 'refs/tags/*') {
+              $ValidationParameters.Tag = $env:GITHUB_REF.Substring('refs/tags/'.Length)
+          }
+          .\build\Invoke-Validation.ps1 @ValidationParameters
   powershell-validation:
     name: PowerShell validation
     needs: validate
@@ -32,17 +40,3 @@ jobs:
             echo "::error::CI validation did not succeed ($VALIDATION_RESULT)."
             exit 1
           fi
-  validate-tag-version:
-    if: startsWith(github.ref, 'refs/tags/')
-    runs-on: windows-2022
-    steps:
-      - uses: actions/checkout@v7
-      - name: Compare tag and version
-        shell: powershell
-        env:
-          RELEASE_TAG: ${{ github.ref_name }}
-        run: |
-          Set-PSRepository PSGallery -InstallationPolicy Trusted
-          Install-Module Pester -MinimumVersion 5.5.0 -MaximumVersion 5.99.99 -Scope CurrentUser -Force -SkipPublisherCheck
-          Install-Module PSScriptAnalyzer -MinimumVersion 1.22.0 -Scope CurrentUser -Force
-          .\build\Invoke-Validation.ps1 -Tag $env:RELEASE_TAG
