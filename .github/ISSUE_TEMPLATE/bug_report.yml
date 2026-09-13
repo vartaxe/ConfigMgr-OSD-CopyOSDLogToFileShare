@@ -1,0 +1,25 @@
+name: Bug report
+description: Report a reproducible issue
+title: "[Bug]: "
+labels:
+  - bug
+body:
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: What happened?
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: ConfigMgr version, Windows version, WinPE/full Windows, and sanitized Task Sequence context.
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Sanitized logs
+      description: Paste only sanitized log snippets. Do not upload raw archives, secrets, tokens, or certificates.

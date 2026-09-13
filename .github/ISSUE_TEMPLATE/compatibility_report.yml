@@ -1,0 +1,27 @@
+name: Compatibility report
+description: Report an environment-specific compatibility result
+title: "[Compatibility]: "
+labels:
+  - compatibility
+body:
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: Include ConfigMgr version, Windows version, and whether the script ran in WinPE or full Windows.
+    validations:
+      required: true
+  - type: textarea
+    id: smb
+    attributes:
+      label: SMB configuration
+      description: Describe the SMB dialect and any explicit compatibility parameters used. Do not include credentials or internal server names.
+    validations:
+      required: true
+  - type: textarea
+    id: result
+    attributes:
+      label: Result
+      description: Describe the expected and actual result with sanitized log excerpts.
+    validations:
+      required: true
