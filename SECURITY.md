@@ -26,5 +26,3 @@ Start with a minimal description and arrange a private channel before sharing se
 - `_SMSTSReserved*` credentials
 - `net use`
 - `cmdkey`
-- LDAP 389 fallback
-- Explicit NTLM LDAP mode
