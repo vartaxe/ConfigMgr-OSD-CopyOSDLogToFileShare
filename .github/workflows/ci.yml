@@ -18,6 +18,20 @@ jobs:
           Install-Module Pester -MinimumVersion 5.5.0 -MaximumVersion 5.99.99 -Scope CurrentUser -Force -SkipPublisherCheck
           Install-Module PSScriptAnalyzer -MinimumVersion 1.22.0 -Scope CurrentUser -Force
           .\build\Invoke-Validation.ps1
+  powershell-validation:
+    name: PowerShell validation
+    needs: validate
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Report canonical validation result
+        env:
+          VALIDATION_RESULT: ${{ needs.validate.result }}
+        run: |
+          if [ "$VALIDATION_RESULT" != "success" ]; then
+            echo "::error::CI validation did not succeed ($VALIDATION_RESULT)."
+            exit 1
+          fi
   validate-tag-version:
     if: startsWith(github.ref, 'refs/tags/')
     runs-on: windows-2022

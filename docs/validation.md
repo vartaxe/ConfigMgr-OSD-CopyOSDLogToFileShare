@@ -30,6 +30,13 @@ EditorConfig describes editing conventions, not hash normalization: regenerate t
 Neither checksums nor a CI pass authenticate a publisher or prove live deployment behavior. The validation illustration is not a test transcript.
 Repository checks include source-pattern tests and behavioral tests using real filesystem copies and ZIP manifests; Task Sequence and network interactions are mocked.
 
+## Required CI checks
+
+The canonical `.github/workflows/ci.yml` workflow preserves both required branch-protection checks: `CI validation` and `PowerShell validation`.
+`CI validation` runs the full Windows PowerShell 5.1 validator. `PowerShell validation` is a lightweight dependent status job, not a second validation run.
+It passes only when `CI validation` succeeds and fails if that job fails, is cancelled, or is skipped. Its `always()` condition prevents a failed dependency from silently skipping the status job.
+Keep both check names while branch protection requires them; deleting or renaming a required check leaves pull requests blocked.
+
 ## Pending live validation
 
 Live testing remains pending for the current WinPE boot image, a full Windows Task Sequence, SMB3 encrypted and SMB2 compatibility destinations, wrong credentials, access denied, destination unavailability, interrupted uploads, archive retention after failure, and sanitized `CopyOSDLogs.log` and `smsts.log`.
