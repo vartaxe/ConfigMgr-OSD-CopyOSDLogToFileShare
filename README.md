@@ -7,11 +7,11 @@ Version **1.0.0 is pre-release**; live ConfigMgr, WinPE, and SMB validation is p
 
 [Quick start](#quick-start) · [Deployment](docs/deployment.md) · [Compatibility](docs/compatibility.md) · [Security](SECURITY.md) · [Troubleshooting](docs/troubleshooting.md)
 
-![Status](https://img.shields.io/badge/1.0.0-pre--release-orange)
-![CI](https://github.com/vartaxe/ConfigMgr-OSD-CopyOSDLogToFileShare/actions/workflows/ci.yml/badge.svg)
+[![Version](https://img.shields.io/badge/version-1.0.0-2671be)](VERSION)
+[![CI](https://github.com/vartaxe/ConfigMgr-OSD-CopyOSDLogToFileShare/actions/workflows/ci.yml/badge.svg)](https://github.com/vartaxe/ConfigMgr-OSD-CopyOSDLogToFileShare/actions/workflows/ci.yml)
 ![PowerShell](https://img.shields.io/badge/Windows%20PowerShell-5.1-2671be)
-![License](https://img.shields.io/badge/license-MIT-22c55e)
-[![Sponsor](https://img.shields.io/badge/sponsor-vartaxe-db61a2)](https://github.com/sponsors/vartaxe)
+[![License](https://img.shields.io/badge/license-MIT-22c55e)](LICENSE)
+[![Sponsor](https://img.shields.io/badge/sponsor-%E2%9D%A4-db61a2)](https://github.com/sponsors/vartaxe)
 
 ## Quick start
 

@@ -1,6 +1,6 @@
 # Release notes
 
-## v1.0.0 (pre-release review)
+## v1.0.0
 
 The supplied `Copy-OSDLogToFileShare.ps1` remains version 1.0.0. No tag, published release, or live validation is implied.
 

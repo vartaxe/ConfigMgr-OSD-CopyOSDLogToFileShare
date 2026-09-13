@@ -48,15 +48,29 @@ jobs:
           $Hash = (Get-FileHash -LiteralPath $Archive -Algorithm SHA256).Hash
           "$Hash  $(Split-Path -Leaf $Archive)" | Set-Content -LiteralPath "$Archive.sha256" -Encoding ascii
 
+      - name: Extract release notes for the tag
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $Notes = Get-Content -LiteralPath 'RELEASE-NOTES.md' -Raw
+          $Pattern = '(?ms)^##[ \t]+' + [regex]::Escape($env:RELEASE_TAG) + '[ \t]*\r?$(.*?)(?=^##[ \t]|\z)'
+          $Section = [regex]::Match($Notes, $Pattern)
+          if (-not $Section.Success) { throw "RELEASE-NOTES.md has no '## $env:RELEASE_TAG' section." }
+          $Body = $Section.Groups[1].Value.Trim()
+          if ([string]::IsNullOrWhiteSpace($Body)) { throw "Release notes for $env:RELEASE_TAG are empty." }
+          Set-Content -LiteralPath (Join-Path $env:RUNNER_TEMP 'release-body.md') -Value $Body -Encoding utf8
+
       - name: Publish GitHub prerelease
-        shell: bash
+        shell: powershell
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create "$RELEASE_TAG" \
-            "$RUNNER_TEMP/ConfigMgr-OSD-CopyOSDLogToFileShare-$RELEASE_TAG.zip" \
-            "$RUNNER_TEMP/ConfigMgr-OSD-CopyOSDLogToFileShare-$RELEASE_TAG.zip.sha256" \
-            --verify-tag \
-            --title "ConfigMgr OSD Copy Logs to File Share $RELEASE_TAG" \
-            --notes-file RELEASE-NOTES.md \
+          $ErrorActionPreference = 'Stop'
+          $Archive = Join-Path $env:RUNNER_TEMP "ConfigMgr-OSD-CopyOSDLogToFileShare-$env:RELEASE_TAG.zip"
+          $Body = Join-Path $env:RUNNER_TEMP 'release-body.md'
+          gh release create $env:RELEASE_TAG $Archive "$Archive.sha256" `
+            --verify-tag `
+            --title "ConfigMgr OSD Copy Logs to File Share $env:RELEASE_TAG" `
+            --notes-file $Body `
             --prerelease
+          if ($LASTEXITCODE -ne 0) { throw "gh release create failed for $env:RELEASE_TAG." }
