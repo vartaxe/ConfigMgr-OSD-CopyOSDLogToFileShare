@@ -161,7 +161,7 @@ function Write-Log {
             }
         }
     }
-    $Message = $Message -replace '[\r\n]+',' '
+    $Message = $Message -replace '[\r\n]+',' ' -replace '\]LOG\]!>', ']LOG removed>'
     try {
         $Type = switch ($Level) { 'WARN' {2} 'ERROR' {3} default {1} }
         $Now = [DateTimeOffset]::Now

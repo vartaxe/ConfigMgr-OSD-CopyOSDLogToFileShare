@@ -9,8 +9,9 @@ Current scope is **pre-release review of version 1.0.0**. Do not merge, tag, or 
 5. Record static/unit results separately from pending [live scenarios](validation.md#pending-live-validation).
 6. Obtain maintainer review and explicit approval before any future merge, tag, or release; pushing a version tag now starts publication, so approval must come first. Complete live validation before claiming platform compatibility.
 
-Git's `* -text` attribute is intentional: checksums refer to exact stored bytes, not normalized text.
-Do not re-enable automatic line-ending conversion without changing and verifying the manifest strategy.
+## Checksum checkout convention
+
+`CHECKSUMS.txt` hashes the **checked-out file bytes**. Follow `.gitattributes`: PowerShell `.ps1` files use **CRLF**; other text files use **LF**, including Markdown, YAML, SVG, `LICENSE`, and `VERSION`. These repository rules avoid dependence on a contributor's global `core.autocrlf` setting.
 CI keeps read-only contents permission, validates tags, and does not publish releases.
 Publishing is a separate `.github/workflows/release.yml` workflow with `contents: write`, triggered only by a maintainer-pushed `v*.*.*` tag or manual dispatch.
 It re-runs the validator against the tagged revision with `-Tag`, then publishes a GitHub prerelease holding a `git archive` zip and its SHA-256 sidecar, using `--verify-tag` so a missing or mismatched tag fails.

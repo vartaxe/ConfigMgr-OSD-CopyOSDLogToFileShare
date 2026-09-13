@@ -1,1 +1,4 @@
-* -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
+* text=auto eol=lf
+*.ps1 text eol=crlf
+*.md text eol=lf
+*.yml text eol=lf
