@@ -458,6 +458,14 @@ Describe 'Orchestration with mocked Task Sequence and network' {
         @(Get-ChildItem -LiteralPath $script:Pending).Count | Should -Be 0
         Should -Invoke Send-Archive -Times 1 -Exactly
     }
+    It 'passes the Task Sequence credential to Send-Archive' {
+        & $script:MainBody
+        $script:ObservedExitCode | Should -Be 0
+        Should -Invoke Send-Archive -Times 1 -Exactly -ParameterFilter {
+            $Credential -is [System.Management.Automation.PSCredential] -and
+            $Credential.UserName -eq 'CONTOSO\test-user'
+        }
+    }
     It 'retains a readable local archive and stops after the configured failed attempts' {
         Mock Send-Archive { throw 'Destination unavailable' }
         & $script:MainBody
