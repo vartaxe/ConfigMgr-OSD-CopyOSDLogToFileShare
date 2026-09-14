@@ -6,7 +6,7 @@ Current scope is **pre-release review of version 1.0.0**. Do not merge, tag, or 
 2. Regenerate `CHECKSUMS.txt` for every maintained source file except the manifest itself, including dotfiles.
 3. Run the [full validator](validation.md) without `-SkipChecksums`; optionally pass `-Tag v1.0.0` to check the proposed tag without creating it.
 4. Verify the manifest against the worktree, an extracted `git archive`, and a fresh checkout of the exact candidate commit. Keep verification artifacts outside the source root.
-5. Record static/unit results separately from pending [live scenarios](validation.md#pending-live-validation).
+5. Record static/unit results separately from pending [live scenarios](validation.md#required-live-tests).
 6. Obtain maintainer review and explicit approval before any future merge, tag, or release; pushing a version tag now starts publication, so approval must come first. Complete live validation before claiming platform compatibility.
 7. Add a `## vX.Y.Z` section to `RELEASE-NOTES.md`. The `Release` workflow publishes only that version section and fails if it is missing or empty.
 
