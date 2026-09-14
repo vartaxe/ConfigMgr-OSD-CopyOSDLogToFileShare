@@ -5,7 +5,7 @@
 | Target | Windows PowerShell 5.1 and current supported ConfigMgr releases |
 | Target, unverified | Full Windows and current WinPE with PowerShell components |
 | Conditional, unverified | Older clients with WMF 5.1 and explicitly approved compatibility settings |
-| Unsupported | PowerShell 7 task-sequence runtime, SMB1, NTLMv1, clear-text password LDAP |
+| Unsupported | PowerShell 7 task-sequence runtime, SMB1, NTLMv1, guest or unauthenticated SMB |
 
 No platform has a recorded live pass in this repository. Windows PowerShell 5.1 alone does not guarantee that required SMB cmdlets and parameters exist.
 

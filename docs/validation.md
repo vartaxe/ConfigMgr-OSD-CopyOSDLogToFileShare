@@ -6,12 +6,16 @@ Run `powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\build\Invoke-Vali
 
 ## Prerequisites and scope
 
-Install Pester 5 or later and PSScriptAnalyzer in the validation environment. CI pins exact module versions, Pester 5.7.1 and PSScriptAnalyzer 1.25.0, so an upstream module release cannot silently change validation results.
-The validator explicitly requires Windows PowerShell 5.1 and imports Pester with minimum version 5.
+Install the same pinned development modules used by CI: Pester 5.7.1 and PSScriptAnalyzer 1.25.0. The validator explicitly requires Windows PowerShell 5.1 and those exact module versions, so an upstream module release cannot silently change validation results.
 It analyzes `Scripts`, `Tests`, and `build`, checks `VERSION` against the production script's literal version assignment, and verifies `CHECKSUMS.txt`.
-Parser errors, analyzer warnings/errors, missing modules, failed Pester discovery, zero discovered tests, failed tests, and manifest/version errors return a nonzero process exit.
+Parser errors, analyzer warnings/errors, missing modules, failed, skipped, or not-run Pester tests, failed discovery, zero discovered tests, and manifest/version errors return a nonzero process exit.
 
 ```powershell
+Install-Module Pester -RequiredVersion '5.7.1' -Repository PSGallery -Scope CurrentUser -Force
+Install-Module PSScriptAnalyzer -RequiredVersion '1.25.0' -Repository PSGallery -Scope CurrentUser -Force
+Import-Module Pester -RequiredVersion '5.7.1' -Force
+Import-Module PSScriptAnalyzer -RequiredVersion '1.25.0' -Force
+
 # Final validation; checksums are required.
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\build\Invoke-Validation.ps1
 
@@ -25,8 +29,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\build\Invoke-Validatio
 The manifest covers all files in the source root, including dotfiles, excluding only root `.git` metadata and `CHECKSUMS.txt` itself.
 Each line is a SHA-256 hash, two spaces, then a root-relative path using forward slashes.
 Duplicate, missing, extra, malformed, and mismatched entries fail. Validate a clean source tree or full extracted source archive; keep generated ZIPs and test artifacts outside that tree.
-`.gitattributes` uses `* -text` so Git preserves exact bytes rather than silently converting line endings between the worktree and `git archive`.
-Changing attributes does not retroactively repair bytes already normalized in an existing index or checkout. Stage the reviewed exact bytes, regenerate the manifest, and verify the candidate commit's archive and a fresh checkout as well as the working tree.
+`.gitattributes` normalizes PowerShell `.ps1` files to CRLF and Markdown, YAML, SVG, `LICENSE`, and `VERSION` to LF. Regenerate the manifest after any content or line-ending change, then verify the candidate commit's archive and a fresh checkout as well as the working tree.
 EditorConfig describes editing conventions, not hash normalization: regenerate the manifest after any byte change.
 
 Neither checksums nor a CI pass authenticate a publisher or prove live deployment behavior. The validation illustration is not a test transcript.
@@ -68,6 +71,7 @@ No static success illustration or workflow definition is evidence of a passed ru
 | Remote byte-size verification | **PENDING** | Upload verifies remote file size matches local archive length before removing local files |
 | Sanitized dedicated log | **PENDING** | `CopyOSDLogs.log` contains no cleartext passwords or credentials across success and failure paths |
 | Sanitized ConfigMgr log | **PENDING** | Corresponding `smsts.log` contains no credentials or sensitive parameters |
+| Sanitized archive manifest | **PENDING** | `Manifest.json` contains no credential strings or raw exception diagnostics when source collection fails |
 | Credential cleanup and failure propagation | **PENDING** | Custom Task Sequence variables cleared on both success and failure; failed script result preserved |
 
 Keep raw logs private. Record only sanitized evidence and non-sensitive environment versions. See [compatibility](compatibility.md) for candidate platforms and [security](../SECURITY.md) for limitations.

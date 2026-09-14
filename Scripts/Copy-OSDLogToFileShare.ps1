@@ -142,7 +142,7 @@ function Initialize-Log {
         }
     }
     catch {
-        Write-Verbose $_.Exception.Message
+        Write-Verbose 'Cannot read _SMSTSLogPath; using the Windows Temp log location.'
     }
 
     if (-not (Test-Path -LiteralPath $Folder -PathType Container)) {
@@ -175,12 +175,67 @@ function Write-Log {
     if($Level -ne 'INFO'){ Write-Warning "[$Level] $Message" }
 }
 
+function Get-SafeErrorMessage {
+    param(
+        [Parameter(Mandatory = $true)]
+        [System.Management.Automation.ErrorRecord]$ErrorRecord
+    )
+
+    $Exception = $ErrorRecord.Exception
+    while ($null -ne $Exception.InnerException) {
+        $Exception = $Exception.InnerException
+    }
+
+    $KnownMessages = @(
+        'Microsoft.SMS.TSEnvironment is unavailable. Run this script inside an active ConfigMgr Task Sequence.',
+        "Task Sequence variable 'OSDLogFileShare' is empty.",
+        "Task Sequence variable 'OSDLogUserName' is empty.",
+        "Task Sequence variable 'OSDLogPassword' is empty.",
+        'OSDLogFileShare must be a UNC path with a server and share, without wildcards or device-path syntax.',
+        'OSDLogFileShare contains an invalid path component.',
+        'SMB inspection is unavailable. An explicit AllowUnverifiedSmb decision is required.',
+        'No unambiguous SMB connection was found for the requested share and credential.',
+        'SMB integrity is required but the connection is neither signed nor encrypted.',
+        'SMB privacy is required but the connection is not encrypted.',
+        'Per-connection SMB controls are unavailable. An explicit AllowUnverifiedSmb decision is required.',
+        'Per-connection NTLM blocking is unavailable. An explicit AllowNtlmV2 decision with an existing NTLMv2-only client policy is required.',
+        'AllowNtlmV2 requires an existing LmCompatibilityLevel of 3 through 5. No policy was changed.',
+        'An SMB mapping already exists for the destination. It will not be reused or removed.'
+    )
+    if ($Exception.Message -cin $KnownMessages) {
+        return $Exception.Message
+    }
+    if ($Exception.Message -match "^SMB dialect '.*' does not meet the required minimum '.*'\.$") {
+        return 'SMB dialect does not meet the required minimum.'
+    }
+    if ($Exception.Message -match '^SMB properties cannot be verified: .+\.$') {
+        return 'SMB properties cannot be verified.'
+    }
+    if ($Exception.Message -match '^Per-connection .+ is unavailable\. An explicit AllowUnverifiedSmb decision is required\.$') {
+        return 'A required per-connection SMB control is unavailable.'
+    }
+    if ($Exception.Message -match '^TCP 445 is not reachable on .+\.$') {
+        return 'TCP 445 is not reachable on the configured server.'
+    }
+    if ($Exception.Message -match '^Destination folder does not exist: .+$') {
+        return 'Configured destination folder does not exist.'
+    }
+    if ($Exception.Message -match '^Remote archive size mismatch\. Local=\d+ Remote=\d+$') {
+        return 'Remote archive size verification failed.'
+    }
+    if ($Exception.Message -match '^Upload failed after (\d+) attempt\(s\)\. Pending local archive retained: .+$') {
+        return "Upload failed after $($Matches[1]) attempt(s). Pending local archive retained."
+    }
+
+    return "Operation failed ($($Exception.GetType().Name)); raw exception details are omitted to protect credentials."
+}
+
 function Test-WindowsPe {
     try {
         $Value = ([string]$script:TaskSequenceEnvironment.Value('_SMSTSInWinPE')).Trim()
         if ($Value -eq 'true') { return $true }
         if ($Value -eq 'false') { return $false }
-    } catch { Write-Verbose $_.Exception.Message }
+    } catch { Write-Verbose 'Cannot read _SMSTSInWinPE; using local WinPE detection.' }
     if(Test-Path 'HKLM:\SYSTEM\CurrentControlSet\Control\MiniNT'){return $true}
     return $env:SystemDrive -eq 'X:'
 }
@@ -222,7 +277,7 @@ function Get-ComputerNameForArchive {
             $Candidates += [string]$script:TaskSequenceEnvironment.Value($Name)
         }
         catch {
-            Write-Verbose $_.Exception.Message
+            Write-Verbose "Cannot read Task Sequence variable '$Name' for archive naming."
         }
     }
 
@@ -389,13 +444,14 @@ function Copy-LogSource {
         })
     }
     catch {
+        $SafeError = Get-SafeErrorMessage -ErrorRecord $_
         [void]$ManifestItems.Add([pscustomobject]@{
             Name = $Source.Name
             Source = $Source.Path
             Status = 'Error'
-            Message = $_.Exception.Message
+            Message = $SafeError
         })
-        Write-Log -Level 'WARN' -Message "Source collection failed: $($Source.Path); $($_.Exception.Message)"
+        Write-Log -Level 'WARN' -Message "Source collection failed: $($Source.Path); $SafeError"
     }
 }
 
@@ -483,12 +539,13 @@ function Confirm-SmbConnectionSecurity {
         $Connection = $Connections[0]
     }
     catch {
+        $SafeError = Get-SafeErrorMessage -ErrorRecord $_
         if ($AllowUnverified) {
-            Write-Log -Level 'WARN' -Message "Compatibility enabled: AllowUnverifiedSmb bypassed SMB connection inspection failure: $($_.Exception.Message)"
+            Write-Log -Level 'WARN' -Message "Compatibility enabled: AllowUnverifiedSmb bypassed SMB connection inspection failure: $SafeError"
             return
         }
 
-        throw "Unable to verify SMB connection security: $($_.Exception.Message)"
+        throw "Unable to verify SMB connection security: $SafeError"
     }
 
     $Unknown = @()
@@ -698,7 +755,7 @@ try {
         Add-LogSource -List $Sources -Name 'TaskSequence' -Path $TaskSequenceLogPath
     }
     catch {
-        Write-Verbose $_.Exception.Message
+        Write-Log -Level 'WARN' -Message 'Cannot read _SMSTSLogPath for source collection; Task Sequence logs will not be included.'
     }
 
     Add-LogSource -List $Sources -Name 'CopyOSDLogs' -Path $script:LogPath -Recurse:$false
@@ -756,7 +813,7 @@ try {
             break
         }
         catch {
-            Write-Log -Level 'WARN' -Message "Upload attempt $Attempt failed: $($_.Exception.Message)"
+            Write-Log -Level 'WARN' -Message "Upload attempt $Attempt failed: $(Get-SafeErrorMessage -ErrorRecord $_)"
             if (($Attempt -lt $RetryCount) -and ($RetryDelaySeconds -gt 0)) {
                 Start-Sleep -Seconds $RetryDelaySeconds
             }
@@ -772,7 +829,7 @@ try {
     $ExitCode = 0
 }
 catch {
-    Write-Log -Level 'ERROR' -Message $_.Exception.Message
+    Write-Log -Level 'ERROR' -Message (Get-SafeErrorMessage -ErrorRecord $_)
     $ExitCode = 1
 }
 finally {

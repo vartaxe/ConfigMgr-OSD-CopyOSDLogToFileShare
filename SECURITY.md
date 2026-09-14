@@ -16,7 +16,7 @@ Start with a minimal description and arrange a private channel before sharing se
 - Disable PowerShell parameter logging for steps that depend on credentials.
 - Clear credential variables immediately after the related script step, including its failure path.
 - Treat generated logs and archives as internal diagnostic data.
-- The script redacts explicit supplied credentials in its own log; collected third-party logs and archives are not scrubbed.
+- Script-generated errors use known credential-free messages or an exception type; raw exception messages and explicit supplied credentials are not written to the script log or manifest. Collected third-party logs and archives are not scrubbed.
 - Enforce SMB1 and guest restrictions externally. The script never enables them or changes authentication policy.
 - Default SMB verification fails closed. Approve and test any [compatibility exceptions](docs/compatibility.md); authentication negotiation is not proven by `Get-SmbConnection`.
 

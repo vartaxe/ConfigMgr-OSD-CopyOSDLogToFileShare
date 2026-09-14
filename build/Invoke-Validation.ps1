@@ -2,7 +2,7 @@
 .SYNOPSIS
 Validates the source tree using Windows PowerShell 5.1.
 .PARAMETER Tag
-Optional tag in the form v1.0.0 or 1.0.0, checked against VERSION and the script.
+Optional tag in the form v1.0.0, checked against VERSION and the script.
 .PARAMETER SkipChecksums
 Developer loop only: skips the manifest while source edits await regeneration.
 #>
@@ -21,8 +21,8 @@ try {
         throw 'Validation requires Windows PowerShell 5.1 (powershell.exe).'
     }
 
-    Import-Module Pester -MinimumVersion 5.0.0 -ErrorAction Stop
-    Import-Module PSScriptAnalyzer -ErrorAction Stop
+    Import-Module Pester -RequiredVersion 5.7.1 -ErrorAction Stop
+    Import-Module PSScriptAnalyzer -RequiredVersion 1.25.0 -ErrorAction Stop
     $Root = Split-Path -Parent $PSScriptRoot
     $Files = @(Get-ChildItem -LiteralPath $Root -Force | Where-Object { $_.Name -ne '.git' } |
         ForEach-Object {
@@ -64,7 +64,7 @@ try {
     $ScriptVersion = $Assignments[0].Right.Expression.Value
     if ($RepositoryVersion -cne $ScriptVersion) { throw 'VERSION and script version differ.' }
     if ($PSBoundParameters.ContainsKey('Tag')) {
-        if ($Tag -cnotmatch '^v?\d+\.\d+\.\d+$' -or ($Tag -creplace '^v', '') -cne $RepositoryVersion) {
+        if ($Tag -cnotmatch '^v\d+\.\d+\.\d+$' -or $Tag.Substring(1) -cne $RepositoryVersion) {
             throw 'Tag does not match VERSION and script version.'
         }
     }
@@ -86,8 +86,9 @@ try {
     $Configuration.Output.Verbosity = 'Detailed'
     $Result = Invoke-Pester -Configuration $Configuration
     if ($null -eq $Result -or $Result.Result -ne 'Passed' -or $Result.TotalCount -eq 0 -or
-        $Result.FailedCount -gt 0 -or $Result.FailedContainersCount -gt 0 -or $Result.FailedBlocksCount -gt 0) {
-        throw 'Pester failed, discovery failed, or no tests were discovered.'
+        $Result.FailedCount -gt 0 -or $Result.FailedContainersCount -gt 0 -or $Result.FailedBlocksCount -gt 0 -or
+        $Result.SkippedCount -gt 0 -or $Result.NotRunCount -gt 0) {
+        throw 'Pester did not pass every discovered test.'
     }
 
     if (-not $SkipChecksums) {
