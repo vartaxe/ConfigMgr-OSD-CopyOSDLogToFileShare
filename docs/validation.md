@@ -7,6 +7,7 @@ Run `powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\build\Invoke-Vali
 ## Prerequisites and scope
 
 Install the same pinned development modules used by CI: Pester 5.7.1 and PSScriptAnalyzer 1.25.0. The validator explicitly requires Windows PowerShell 5.1 and those exact module versions, so an upstream module release cannot silently change validation results.
+Use an approved package source and trust policy; do not bypass publisher verification.
 It analyzes `Scripts`, `Tests`, and `build`, checks `VERSION` against the production script's literal version assignment, and verifies `CHECKSUMS.txt`.
 Parser errors, analyzer warnings/errors, missing modules, failed, skipped, or not-run Pester tests, failed discovery, zero discovered tests, and manifest/version errors return a nonzero process exit.
 
