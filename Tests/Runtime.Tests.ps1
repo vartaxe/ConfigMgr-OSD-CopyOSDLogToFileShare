@@ -181,15 +181,37 @@ Describe 'Task Sequence environment and input' {
         $Path | Should -Not -BeNullOrEmpty
         { Resolve-UncDestination $Path } | Should -Throw
     }
-    It 'redacts explicit credentials in the dedicated log and warning output' {
+    It 'redacts credentials and neutralizes CMTrace record terminators in log output' {
+        if (Test-Path -LiteralPath $script:LogPath) {
+            Remove-Item -LiteralPath $script:LogPath -Force
+        }
         $Warnings = @()
-        $Output = @(Write-Log -Level WARN -Message "Failure CONTOSO\test-user test-secret-only`r`nnext" -WarningVariable Warnings)
+        $Output = @(Write-Log -Level WARN -Message "Failure CONTOSO\test-user test-secret-only`r`nnext]LOG]!>" -WarningVariable Warnings)
         $Output.Count | Should -Be 0
         ($Warnings -join ' ') | Should -Not -Match 'test-secret-only|CONTOSO\\test-user'
+        ($Warnings -join ' ') | Should -Not -Match '\]LOG\]!>'
         $Text = Get-Content -LiteralPath $script:LogPath -Raw
         $Text | Should -Not -Match 'test-secret-only|CONTOSO\\test-user'
         $Text | Should -Match '\[REDACTED\]'
+        $Text | Should -Match '\]LOG removed>'
         $Text | Should -Match '<!\[LOG\[.*\]LOG\]!><time="'
+        ([regex]::Matches($Text, '\]LOG\]!>')).Count | Should -Be 1
+    }
+
+    It 'keeps raw source-copy exception details out of the manifest and dedicated log' {
+        $RawDetail = 'CONTOSO\test-user test-secret-only raw source failure'
+        $SourcePath = Join-Path $TestDrive 'source.log'
+        Set-Content -LiteralPath $SourcePath -Value 'source'
+        $Manifest = New-Object System.Collections.ArrayList
+        Mock Copy-Item { throw [InvalidOperationException]::new($RawDetail) }
+
+        Copy-LogSource -Source ([pscustomobject]@{Name='Source';Path=$SourcePath;Recurse=$false}) -DestinationRoot $TestDrive -ManifestItems $Manifest
+
+        $Manifest.Count | Should -Be 1
+        $Manifest[0].Status | Should -Be 'Error'
+        $Manifest[0].Message | Should -BeExactly 'Operation failed (InvalidOperationException); raw exception details are omitted to protect credentials.'
+        $Manifest[0].Message | Should -Not -Match 'test-user|test-secret-only|raw source failure'
+        (Get-Content -LiteralPath $script:LogPath -Raw) | Should -Not -Match 'test-user|test-secret-only|raw source failure'
     }
     It 'appends every CMTrace entry without losing rapid successive writes' {
         $script:LogPath = Join-Path $TestDrive ('append-' + [guid]::NewGuid().ToString('N') + '.log')
@@ -226,6 +248,18 @@ Describe 'SMB inspection policy' {
     It 'fails closed for inspection errors by default' {
         Mock Get-SmbConnection { throw 'Access denied' }
         { Confirm-SmbConnectionSecurity @script:Inspection } | Should -Throw '*Unable to verify*'
+    }
+    It 'does not log raw inspection diagnostics under an explicit waiver' {
+        $RawDetail = 'CONTOSO\test-user test-secret-only raw inspection failure'
+        Mock Get-SmbConnection { throw [InvalidOperationException]::new($RawDetail) }
+        $script:Inspection.AllowUnverified = $true
+        $Warnings = @()
+
+        Confirm-SmbConnectionSecurity @script:Inspection -WarningVariable +Warnings
+
+        ($Warnings -join ' ') | Should -Not -Match 'test-user|test-secret-only|raw inspection failure'
+        (Get-Content -LiteralPath $script:LogPath -Raw) | Should -Not -Match 'test-user|test-secret-only|raw inspection failure'
+        (Get-Content -LiteralPath $script:LogPath -Raw) | Should -Match 'Operation failed \(InvalidOperationException\)'
     }
     It 'does not accept another credential session as proof' {
         $script:Connection.Credential = 'CONTOSO\someone-else'
@@ -440,6 +474,16 @@ Describe 'Orchestration with mocked Task Sequence and network' {
             ($Manifest.Items | Where-Object Name -EQ CCMLogs).Status | Should -Be 'Collected'
             ($Manifest.Items | Where-Object Name -EQ CBS) | Should -BeNullOrEmpty
         } finally { $Zip.Dispose() }
+    }
+    It 'does not log raw upload exception details' {
+        $RawDetail = 'CONTOSO\test-user test-secret-only raw upload failure'
+        Mock Send-Archive { throw [InvalidOperationException]::new($RawDetail) }
+
+        & $script:MainBody
+
+        $script:ObservedExitCode | Should -Be 1
+        (Get-Content -LiteralPath $script:LogPath -Raw) | Should -Not -Match 'test-user|test-secret-only|raw upload failure'
+        (Get-Content -LiteralPath $script:LogPath -Raw) | Should -Match 'Operation failed \(InvalidOperationException\)'
     }
     It 'includes extended sources only when explicitly requested' {
         $script:IncludeExtendedLogs = $true

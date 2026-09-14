@@ -1,6 +1,15 @@
-BeforeAll{$script:ProductionScript=Get-Content (Join-Path $PSScriptRoot '..\Scripts\Copy-OSDLogToFileShare.ps1') -Raw}
+BeforeAll{
+ $script:Root=Split-Path -Parent $PSScriptRoot
+ $script:ProductionScript=Get-Content (Join-Path $script:Root 'Scripts\Copy-OSDLogToFileShare.ps1') -Raw
+}
 Describe 'Repository contract'{
- It 'uses version 1.0.0'{$script:ProductionScript|Should -Match '\$script:Version\s*=\s*''1\.0\.0'''}
+ It 'uses one matching three-part numeric version in the script and manifest'{
+  $VersionMatch=[regex]::Match($script:ProductionScript,'(?m)^\$script:Version\s*=\s*''(\d+\.\d+\.\d+)''\s*$')
+  $VersionMatch.Success|Should -BeTrue
+  $ManifestVersion=(Get-Content (Join-Path $script:Root 'VERSION') -Raw).Trim()
+  $ManifestVersion|Should -Match '^\d+\.\d+\.\d+$'
+  $VersionMatch.Groups[1].Value|Should -BeExactly $ManifestVersion
+ }
  It 'uses ConfigMgr TS environment'{$script:ProductionScript|Should -Match 'Microsoft\.SMS\.TSEnvironment'}
  It 'writes CMTrace format'{$script:ProductionScript|Should -Match '<!\[LOG\['}
  It 'uses OSDisk when WinPE identifies the operating system volume'{$script:ProductionScript|Should -Match "Value\('OSDisk'\)"}
