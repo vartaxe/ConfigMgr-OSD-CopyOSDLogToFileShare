@@ -19,4 +19,17 @@ Describe 'Repository contract'{
   }
  }
  It 'avoids prohibited patterns'{$script:ProductionScript|Should -Not -Match 'cmdkey|net\s+use|Win32_Product|Get-WmiObject|\bwmic(?:\.exe)?\b'}
+ It 'pins checkout actions and retains publisher verification'{
+  $ExpectedCheckoutReference='actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1'
+  $WorkflowFiles=@(Get-ChildItem -LiteralPath (Join-Path $script:Root '.github\workflows') -Filter '*.yml' -File)
+  $WorkflowFiles.Count|Should -BeGreaterThan 0
+  foreach($WorkflowFile in $WorkflowFiles){
+   $WorkflowContent=Get-Content -LiteralPath $WorkflowFile.FullName -Raw
+   $WorkflowContent|Should -Match ('(?m)^\s*-\s*uses:\s+'+[regex]::Escape($ExpectedCheckoutReference)+'\s*$')
+   $WorkflowContent|Should -Not -Match '(?i)-SkipPublisherCheck'
+  }
+  $ValidationDocumentation=Get-Content -LiteralPath (Join-Path $script:Root 'docs\validation.md') -Raw
+  $ValidationDocumentation|Should -Not -Match '(?i)-SkipPublisherCheck'
+  $ValidationDocumentation|Should -Match '(?i)do not bypass publisher verification'
+ }
 }
