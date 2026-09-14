@@ -807,7 +807,7 @@ try {
     for ($Attempt = 1; $Attempt -le $RetryCount; $Attempt++) {
         try {
             Write-Log -Message "Upload attempt $Attempt of $RetryCount."
-            $RemoteArchive = Send-Archive -ArchivePath $ArchivePath -DestinationShare $DestinationShare -Credential $Credential -TimeoutSeconds $TimeoutSeconds
+            $RemoteArchive = Send-Archive -ArchivePath $ArchivePath -DestinationShare $DestinationShare -Credential $script:Credential -TimeoutSeconds $TimeoutSeconds
             Write-Log -Message "Upload verified: $RemoteArchive"
             $Uploaded = $true
             break
