@@ -1,4 +1,4 @@
-#requires -Version 5.1
+#Requires -Version 5.1
 <#
 .SYNOPSIS
 Collects focused ConfigMgr OSD logs, creates a ZIP archive, and uploads it to an authenticated file share.

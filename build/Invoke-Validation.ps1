@@ -1,3 +1,4 @@
+#Requires -Version 5.1
 <#
 .SYNOPSIS
 Validates the source tree using Windows PowerShell 5.1.
