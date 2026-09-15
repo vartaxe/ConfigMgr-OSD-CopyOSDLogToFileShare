@@ -460,16 +460,25 @@ Describe 'Orchestration with mocked Task Sequence and network' {
     }
     It 'passes the PSCredential constructed from Task Sequence variables to Send-Archive' {
         $script:Credential = $null
+        $script:ObservedCredential = $null
+        Remove-Variable -Name Credential -ErrorAction SilentlyContinue
         $script:Variables['OSDLogUserName'] = 'CONTOSO\test-user'
         $script:Variables['OSDLogPassword'] = 'test-secret-only'
+        Mock Send-Archive {
+            $script:ObservedCredential = $Credential
+            '\\fileserver.contoso.com\OSDLogs$\Logs\logs.zip'
+        }
 
         & $script:MainBody
 
         $script:ObservedExitCode | Should -Be 0
-        Should -Invoke Send-Archive -Times 1 -Exactly -ParameterFilter {
-            $Credential -is [System.Management.Automation.PSCredential] -and
-            $Credential.UserName -ceq 'CONTOSO\test-user'
-        }
+        Should -Invoke Send-Archive -Times 1 -Exactly
+        $script:ObservedCredential | Should -BeOfType [System.Management.Automation.PSCredential]
+        $script:ObservedCredential.UserName | Should -BeExactly $script:Variables['OSDLogUserName']
+        $script:ObservedCredential.Password | Should -BeOfType [System.Security.SecureString]
+        # Compared as a boolean so neither value can reach test output.
+        ($script:ObservedCredential.GetNetworkCredential().Password -ceq
+            $script:Variables['OSDLogPassword']) | Should -BeTrue
     }
     It 'retains a readable local archive and stops after the configured failed attempts' {
         Mock Send-Archive { throw 'Destination unavailable' }

@@ -35,6 +35,29 @@ Describe 'Repository contract' {
         $script:ProductionScript | Should -Not -Match 'cmdkey|net\s+use|Win32_Product|Get-WmiObject|\bwmic(?:\.exe)?\b'
     }
 
+    It 'binds the script-scoped credential in the orchestration and leaves no unqualified Credential reference' {
+        $Statements = $script:Ast.EndBlock.Statements
+        $Start = ($Statements | Where-Object { $_.Extent.Text -eq '$ExitCode = 1' } | Select-Object -First 1).Extent.StartOffset
+        $End = ($Statements | Where-Object { $_ -is [System.Management.Automation.Language.ExitStatementAst] } | Select-Object -Last 1).Extent.EndOffset
+        $Orchestration = [System.Management.Automation.Language.Parser]::ParseInput(
+            $script:Ast.Extent.Text.Substring($Start, $End - $Start), [ref]$null, [ref]$null)
+
+        $Unqualified = @($Orchestration.FindAll({
+            param($Node)
+            $Node -is [System.Management.Automation.Language.VariableExpressionAst] -and
+            $Node.VariablePath.UserPath -ceq 'Credential'
+        }, $true))
+        $Unqualified.Count | Should -Be 0
+
+        $SendArchive = @($Orchestration.FindAll({
+            param($Node)
+            $Node -is [System.Management.Automation.Language.CommandAst] -and
+            $Node.GetCommandName() -ceq 'Send-Archive'
+        }, $true))
+        $SendArchive.Count | Should -Be 1
+        $SendArchive[0].Extent.Text | Should -Match '-Credential\s+\$script:Credential\b'
+    }
+
     It 'has one matching SHA-256 entry for every maintained file except the checksum manifest' {
         $Names = @()
         foreach ($Line in Get-Content -LiteralPath (Join-Path $script:Root 'CHECKSUMS.txt')) {
