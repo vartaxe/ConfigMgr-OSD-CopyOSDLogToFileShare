@@ -31,6 +31,56 @@ Describe 'Repository contract' {
         }
     }
 
+    Describe 'Script header and help contract' -ForEach @(
+        @{
+            RelativePath = 'Scripts\Copy-OSDLogToFileShare.ps1'
+            Synopsis     = 'Collects focused ConfigMgr OSD logs, creates a ZIP archive, and uploads it to an authenticated file share.'
+            ExampleCount = 2
+        },
+        @{
+            RelativePath = 'build\Invoke-Validation.ps1'
+            Synopsis     = 'Validates the source tree using Windows PowerShell 5.1.'
+            ExampleCount = 0
+        }
+    ) {
+        BeforeAll {
+            Set-StrictMode -Version 2.0
+            $script:HeaderPath = Join-Path $script:Root $RelativePath
+            $script:HeaderLines = [IO.File]::ReadAllLines($script:HeaderPath)
+            $script:HeaderAst = [Management.Automation.Language.Parser]::ParseFile(
+                $script:HeaderPath, [ref]$null, [ref]$null)
+            $script:HeaderParameterNames = @($script:HeaderAst.ParamBlock.Parameters |
+                    ForEach-Object { $_.Name.VariablePath.UserPath } | Sort-Object)
+        }
+
+        It 'keeps the minimum-version declaration first and separate from help in <RelativePath>' {
+            $script:HeaderLines[0] | Should -BeExactly '#Requires -Version 5.1'
+            $script:HeaderLines[1] | Should -BeExactly ''
+            $script:HeaderLines[2] | Should -BeExactly '<#'
+            $script:HeaderAst.ScriptRequirements.RequiredPSVersion | Should -Be ([version]'5.1')
+        }
+
+        It 'associates the authored synopsis and parameter help with <RelativePath>' {
+            $CommentHelp = $script:HeaderAst.GetHelpContent()
+            $CommentHelp | Should -Not -BeNullOrEmpty
+            $CommentHelp.Synopsis.Trim() | Should -BeExactly $Synopsis
+            $HelpNames = @($CommentHelp.Parameters.Keys | Sort-Object)
+            @(Compare-Object $script:HeaderParameterNames $HelpNames).Count | Should -Be 0
+        }
+
+        It 'exposes full help and examples without executing <RelativePath>' {
+            $Help = Get-Help -Name $script:HeaderPath -Full -ErrorAction Stop
+            $Help.Synopsis.Trim() | Should -BeExactly $Synopsis
+            $HelpNames = @($Help.Parameters.Parameter.Name | Sort-Object)
+            @(Compare-Object $script:HeaderParameterNames $HelpNames).Count | Should -Be 0
+            $Examples = @()
+            if ($null -ne $Help.PSObject.Properties['Examples']) {
+                $Examples = @($Help.Examples.Example | Where-Object { $_.Code })
+            }
+            $Examples.Count | Should -Be $ExampleCount
+        }
+    }
+
     It 'avoids prohibited patterns' {
         $script:ProductionScript | Should -Not -Match 'cmdkey|net\s+use|Win32_Product|Get-WmiObject|\bwmic(?:\.exe)?\b'
     }
@@ -43,17 +93,17 @@ Describe 'Repository contract' {
             $script:Ast.Extent.Text.Substring($Start, $End - $Start), [ref]$null, [ref]$null)
 
         $Unqualified = @($Orchestration.FindAll({
-            param($Node)
-            $Node -is [System.Management.Automation.Language.VariableExpressionAst] -and
-            $Node.VariablePath.UserPath -ieq 'Credential'
-        }, $true))
+                    param($Node)
+                    $Node -is [System.Management.Automation.Language.VariableExpressionAst] -and
+                    $Node.VariablePath.UserPath -ieq 'Credential'
+                }, $true))
         $Unqualified.Count | Should -Be 0
 
         $SendArchive = @($Orchestration.FindAll({
-            param($Node)
-            $Node -is [System.Management.Automation.Language.CommandAst] -and
-            $Node.GetCommandName() -ieq 'Send-Archive'
-        }, $true))
+                    param($Node)
+                    $Node -is [System.Management.Automation.Language.CommandAst] -and
+                    $Node.GetCommandName() -ieq 'Send-Archive'
+                }, $true))
         $SendArchive.Count | Should -Be 1
         $SendArchive[0].Extent.Text | Should -Match '-Credential\s+\$script:Credential\b'
     }
@@ -104,5 +154,57 @@ Describe 'Repository contract' {
         $ValidationDocumentation = Get-Content -LiteralPath (Join-Path $script:Root 'docs\validation.md') -Raw
         $ValidationDocumentation | Should -Not -Match '(?i)-SkipPublisherCheck'
         $ValidationDocumentation | Should -Match '(?i)do not bypass publisher verification'
+    }
+}
+
+Describe 'Static illustration contract' {
+    It 'gives every SVG an explicit viewport and linked accessible title and description' {
+        $Assets = @(Get-ChildItem -LiteralPath (Join-Path $script:Root 'assets') -Filter '*.svg' -File)
+        $Assets.Count | Should -BeGreaterThan 0
+        foreach ($Asset in $Assets) {
+            $Document = New-Object Xml.XmlDocument
+            $Document.XmlResolver = $null
+            $Document.Load($Asset.FullName)
+            $Svg = $Document.DocumentElement
+            $Svg.LocalName | Should -BeExactly 'svg'
+            $Svg.GetAttribute('role') | Should -BeExactly 'img'
+            @($Svg.GetAttribute('viewBox') -split '\s+').Count | Should -Be 4
+            [int]$Svg.GetAttribute('width') | Should -BeGreaterThan 0
+            [int]$Svg.GetAttribute('height') | Should -BeGreaterThan 0
+
+            $Labels = @($Svg.GetAttribute('aria-labelledby') -split '\s+')
+            $Labels.Count | Should -Be 2
+            foreach ($Id in $Labels) {
+                $Elements = @($Svg.SelectNodes('//*[@id]') | Where-Object { $_.GetAttribute('id') -ceq $Id })
+                $Elements.Count | Should -Be 1
+                $Elements[0].InnerText | Should -Not -BeNullOrEmpty
+            }
+        }
+    }
+
+    It 'preserves every numbered step and description in both compact workflow variants' {
+        foreach ($Pair in @(
+                @{ Name = 'copylog-flow'; Count = 7 },
+                @{ Name = 'task-sequence-flow'; Count = 4 }
+            )) {
+            $Wide = New-Object Xml.XmlDocument
+            $Wide.XmlResolver = $null
+            $Wide.Load((Join-Path $script:Root "assets\$($Pair.Name).svg"))
+            $Compact = New-Object Xml.XmlDocument
+            $Compact.XmlResolver = $null
+            $Compact.Load((Join-Path $script:Root "assets\$($Pair.Name)-compact.svg"))
+            $WideSteps = @($Wide.GetElementsByTagName('text') |
+                    Where-Object { ($_.GetAttribute('class') -split '\s+') -contains 'number' } |
+                    ForEach-Object { $_.InnerText })
+            $CompactSteps = @($Compact.GetElementsByTagName('text') |
+                    Where-Object { ($_.GetAttribute('class') -split '\s+') -contains 'number' } |
+                    ForEach-Object { $_.InnerText })
+            ($WideSteps -join ',') | Should -BeExactly ((1..$Pair.Count) -join ',')
+            ($CompactSteps -join ',') | Should -BeExactly ($WideSteps -join ',')
+            $Compact.GetElementsByTagName('title')[0].InnerText |
+                Should -BeExactly $Wide.GetElementsByTagName('title')[0].InnerText
+            $Compact.GetElementsByTagName('desc')[0].InnerText |
+                Should -BeExactly $Wide.GetElementsByTagName('desc')[0].InnerText
+        }
     }
 }

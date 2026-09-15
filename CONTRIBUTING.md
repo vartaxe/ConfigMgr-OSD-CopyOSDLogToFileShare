@@ -12,9 +12,19 @@ Before opening a pull request:
 6. Add focused Pester coverage for behavioral fixes, and distinguish mocks from live tests.
 7. Regenerate `CHECKSUMS.txt` after all file changes, including documentation and workflow updates, following the [checkout convention](docs/release-process.md#checksum-checkout-convention). Run validation again before pushing.
 
-Use `-SkipChecksums` only during the developer loop while source edits await manifest regeneration. Final validation must run without that switch.
+`-SkipChecksums` skips only the validator's final manifest verification phase. Repository checksum tests still run, so the switch does not permit a complete validation run with a stale manifest. Regenerate `CHECKSUMS.txt` before running the complete validator, and omit the switch for final validation.
 
 The production PowerShell script must remain self-contained, target Windows PowerShell 5.1, and retain secure defaults. Review analyzer warnings individually; any suppression needs a precise justification. Never include credentials or unsanitized logs in a pull request.
 
 Version 1.0.0 is published as a GitHub prerelease, not a live-certified release. Live ConfigMgr, WinPE, and SMB validation remains pending.
 Record live environment results separately from static analysis and mocked tests; the published v1.0.0 results do not validate later changes. Follow the [release process](docs/release-process.md) for any future publication.
+
+## Source conventions
+
+- Use four-space indentation for PowerShell and SVG source, and two spaces for YAML. Preserve the line endings in `.gitattributes`: CRLF for `.ps1`, LF for other maintained text.
+- Start production scripts and build helpers with `#Requires -Version 5.1`, followed by one blank line before comment-based help. Keep help before `CmdletBinding`, suppression attributes, and `param`. Check both AST-associated help and nonexecuting `Get-Help -Full`.
+- Use the pinned PSScriptAnalyzer formatter for spacing and indentation. Review formatting separately from behavioral changes: preserve non-comment tokens, AST structure, requirements, literal strings, defaults, security decisions, and output streams.
+- Indent Pester setup and nested test blocks to reflect their scope. Preserve fixture contents, assertions, and process timeouts. Comments should explain non-obvious constraints, not restate the code.
+- Use **Windows PowerShell 5.1**, **PowerShell 7**, **PowerShell script**, and **ConfigMgr Task Sequence** consistently; use lowercase task sequence for generic prose.
+
+Keep diagrams static and self-contained, with Segoe UI/system sans-serif typography, the project's cyan/blue palette, and legible light/dark surfaces. Separate step numbers from labels and target text contrast of at least 4.5:1, or 3:1 for large text. Retain meaningful titles, descriptions, explicit pending-status text, equivalent prose, and full-size links; use compact workflow variants when narrow layouts need them. Illustrations are never evidence of a test pass.

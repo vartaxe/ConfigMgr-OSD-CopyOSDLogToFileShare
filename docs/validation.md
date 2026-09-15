@@ -1,6 +1,8 @@
 # Validation
 
-<p align="center"><img src="../assets/validation-pass.svg" alt="Validation checklist showing required parser, PSScriptAnalyzer, and Pester checks with live ConfigMgr and WinPE tests marked PENDING" width="70%"></p>
+<p align="center"><img src="../assets/validation-pass.svg" alt="Illustrative checklist, not a test result: parser, analyzer, Pester, versions, and SHA-256 checks are required; live ConfigMgr, WinPE, and SMB validation remains pending"></p>
+
+[View the full-size validation checklist](../assets/validation-pass.svg). The commands and requirements below provide the equivalent text.
 
 Run `powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\build\Invoke-Validation.ps1` to parse every PowerShell file with Windows PowerShell 5.1, run PSScriptAnalyzer, and execute Pester tests.
 
@@ -23,9 +25,11 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\build\Invoke-Validatio
 # Optional tag check (does not create a tag).
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\build\Invoke-Validation.ps1 -Tag v1.0.0
 
-# Developer loop only, before regenerating CHECKSUMS.txt.
+# Skips only the final manifest phase; repository checksum tests still run.
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\build\Invoke-Validation.ps1 -SkipChecksums
 ```
+
+`-SkipChecksums` does not bypass the repository's checksum tests, which run during Pester before the final manifest phase. Regenerate `CHECKSUMS.txt` before a complete validation run; do not use the switch to validate a stale source manifest.
 
 The manifest covers all files in the source root, including dotfiles, excluding only root `.git` metadata and `CHECKSUMS.txt` itself.
 Each line is a SHA-256 hash, two spaces, then a root-relative path using forward slashes.
