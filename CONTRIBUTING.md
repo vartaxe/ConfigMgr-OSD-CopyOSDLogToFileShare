@@ -14,6 +14,7 @@ Before opening a pull request:
 
 Use `-SkipChecksums` only during the developer loop while source edits await manifest regeneration. Final validation must run without that switch.
 
-The production script must remain self-contained, target Windows PowerShell 5.1, and retain secure defaults. Review analyzer warnings individually; any suppression needs a precise justification. Never include credentials or unsanitized logs in a pull request.
+The production PowerShell script must remain self-contained, target Windows PowerShell 5.1, and retain secure defaults. Review analyzer warnings individually; any suppression needs a precise justification. Never include credentials or unsanitized logs in a pull request.
 
-Record live environment results separately from mocked tests. Do not represent the pre-release 1.0.0 candidate as a published or live-certified release.
+Version 1.0.0 is published as a GitHub prerelease, not a live-certified release. Live ConfigMgr, WinPE, and SMB validation remains pending.
+Record live environment results separately from static analysis and mocked tests; the published v1.0.0 results do not validate later changes. Follow the [release process](docs/release-process.md) for any future publication.
