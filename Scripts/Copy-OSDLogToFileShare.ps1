@@ -1,4 +1,5 @@
 #Requires -Version 5.1
+
 <#
 .SYNOPSIS
 Collects focused ConfigMgr OSD logs, creates a ZIP archive, and uploads it to an authenticated file share.
@@ -85,8 +86,8 @@ param(
 
     [switch]$AllowUnverifiedSmb,
 
-    [ValidateSet('SMB2','SMB3')]
-    [string]$MinimumSmbDialect='SMB3',
+    [ValidateSet('SMB2', 'SMB3')]
+    [string]$MinimumSmbDialect = 'SMB3',
 
     [switch]$AllowNtlmV2
 )
@@ -153,7 +154,7 @@ function Initialize-Log {
 }
 
 function Write-Log {
-    param([Parameter(Mandatory=$true)][string]$Message,[ValidateSet('INFO','WARN','ERROR')][string]$Level='INFO')
+    param([Parameter(Mandatory = $true)][string]$Message, [ValidateSet('INFO', 'WARN', 'ERROR')][string]$Level = 'INFO')
     if ($null -ne $script:Credential) {
         foreach ($SensitiveValue in @($script:Credential.UserName, $script:Credential.GetNetworkCredential().Password)) {
             if (-not [string]::IsNullOrEmpty($SensitiveValue)) {
@@ -161,18 +162,31 @@ function Write-Log {
             }
         }
     }
-    $Message = $Message -replace '[\r\n]+',' ' -replace '\]LOG\]!>', ']LOG removed>'
+    $Message = $Message -replace '[\r\n]+', ' ' -replace '\]LOG\]!>', ']LOG removed>'
     try {
-        $Type = switch ($Level) { 'WARN' {2} 'ERROR' {3} default {1} }
+        $Type = switch ($Level) {
+            'WARN' {
+                2
+            }
+            'ERROR' {
+                3
+            }
+            default {
+                1
+            }
+        }
         $Now = [DateTimeOffset]::Now
         $Bias = [int]$Now.Offset.TotalMinutes
         $Time = $Now.ToString('HH:mm:ss.fff') + ('{0:+0;-0;+0}' -f $Bias)
-        $Line = '<![LOG[{0}]LOG]!><time="{1}" date="{2}" component="{3}" context="" type="{4}" thread="{5}" file="">' -f $Message,$Time,$Now.ToString('MM-dd-yyyy'),$script:Component,$Type,[Threading.Thread]::CurrentThread.ManagedThreadId
+        $Line = '<![LOG[{0}]LOG]!><time="{1}" date="{2}" component="{3}" context="" type="{4}" thread="{5}" file="">' -f $Message, $Time, $Now.ToString('MM-dd-yyyy'), $script:Component, $Type, [Threading.Thread]::CurrentThread.ManagedThreadId
         [IO.File]::AppendAllText($script:LogPath, $Line + [Environment]::NewLine, [Text.Encoding]::UTF8)
-    } catch {
+    }
+    catch {
         Write-Warning "Unable to write CopyOSDLogs.log ($($_.Exception.GetType().FullName), HResult=$($_.Exception.HResult)); use the Task Sequence output for diagnostics."
     }
-    if($Level -ne 'INFO'){ Write-Warning "[$Level] $Message" }
+    if ($Level -ne 'INFO') {
+        Write-Warning "[$Level] $Message"
+    }
 }
 
 function Get-SafeErrorMessage {
@@ -233,10 +247,19 @@ function Get-SafeErrorMessage {
 function Test-WindowsPe {
     try {
         $Value = ([string]$script:TaskSequenceEnvironment.Value('_SMSTSInWinPE')).Trim()
-        if ($Value -eq 'true') { return $true }
-        if ($Value -eq 'false') { return $false }
-    } catch { Write-Verbose 'Cannot read _SMSTSInWinPE; using local WinPE detection.' }
-    if(Test-Path 'HKLM:\SYSTEM\CurrentControlSet\Control\MiniNT'){return $true}
+        if ($Value -eq 'true') {
+            return $true
+        }
+        if ($Value -eq 'false') {
+            return $false
+        }
+    }
+    catch {
+        Write-Verbose 'Cannot read _SMSTSInWinPE; using local WinPE detection.'
+    }
+    if (Test-Path 'HKLM:\SYSTEM\CurrentControlSet\Control\MiniNT') {
+        return $true
+    }
     return $env:SystemDrive -eq 'X:'
 }
 
@@ -262,10 +285,10 @@ function Get-LogStorage {
         }
     }
     [pscustomobject]@{
-        WindowsRoot = $WindowsRoot
+        WindowsRoot     = $WindowsRoot
         ProgramDataRoot = $ProgramDataRoot
         SystemDriveRoot = $SystemDriveRoot
-        PendingRoot = Join-Path $WindowsRoot 'Temp\PendingOSDLogs'
+        PendingRoot     = Join-Path $WindowsRoot 'Temp\PendingOSDLogs'
     }
 }
 
@@ -313,9 +336,9 @@ function Resolve-UncDestination {
     }
 
     return [pscustomobject]@{
-        Server = $Server
-        Share = $Share
-        ShareRoot = $ShareRoot
+        Server      = $Server
+        Share       = $Share
+        ShareRoot   = $ShareRoot
         Destination = $Destination
     }
 }
@@ -376,10 +399,10 @@ function Add-LogSource {
 
     $Path = $Path.Replace('%WINDIR%', $script:WindowsRoot).Replace('%ProgramData%', $script:ProgramDataRoot).Replace('%SystemDrive%', $script:SystemDriveRoot)
     [void]$List.Add([pscustomobject]@{
-        Name = $Name
-        Path = [Environment]::ExpandEnvironmentVariables($Path)
-        Recurse = $Recurse
-    })
+            Name    = $Name
+            Path    = [Environment]::ExpandEnvironmentVariables($Path)
+            Recurse = $Recurse
+        })
 }
 
 function Copy-LogSource {
@@ -400,21 +423,21 @@ function Copy-LogSource {
     try {
         if ([string]::IsNullOrWhiteSpace($Source.Path)) {
             [void]$ManifestItems.Add([pscustomobject]@{
-                Name = $Source.Name
-                Source = $Source.Path
-                Status = 'NotFound'
-                Message = 'Source path is empty.'
-            })
+                    Name    = $Source.Name
+                    Source  = $Source.Path
+                    Status  = 'NotFound'
+                    Message = 'Source path is empty.'
+                })
             return
         }
 
         if (-not (Test-Path -LiteralPath $Source.Path)) {
             [void]$ManifestItems.Add([pscustomobject]@{
-                Name = $Source.Name
-                Source = $Source.Path
-                Status = 'NotFound'
-                Message = ''
-            })
+                    Name    = $Source.Name
+                    Source  = $Source.Path
+                    Status  = 'NotFound'
+                    Message = ''
+                })
             return
         }
 
@@ -437,20 +460,20 @@ function Copy-LogSource {
         }
 
         [void]$ManifestItems.Add([pscustomobject]@{
-            Name = $Source.Name
-            Source = $Source.Path
-            Status = 'Collected'
-            Message = ''
-        })
+                Name    = $Source.Name
+                Source  = $Source.Path
+                Status  = 'Collected'
+                Message = ''
+            })
     }
     catch {
         $SafeError = Get-SafeErrorMessage -ErrorRecord $_
         [void]$ManifestItems.Add([pscustomobject]@{
-            Name = $Source.Name
-            Source = $Source.Path
-            Status = 'Error'
-            Message = $SafeError
-        })
+                Name    = $Source.Name
+                Source  = $Source.Path
+                Status  = 'Error'
+                Message = $SafeError
+            })
         Write-Log -Level 'WARN' -Message "Source collection failed: $($Source.Path); $SafeError"
     }
 }
@@ -472,12 +495,12 @@ function Export-Manifest {
     )
 
     $Manifest = [ordered]@{
-        Tool = 'Copy-OSDLogToFileShare'
-        Version = $script:Version
-        CreatedUtc = (Get-Date).ToUniversalTime().ToString('o')
-        ComputerName = $ComputerName
+        Tool               = 'Copy-OSDLogToFileShare'
+        Version            = $script:Version
+        CreatedUtc         = (Get-Date).ToUniversalTime().ToString('o')
+        ComputerName       = $ComputerName
         ExtendedCollection = $Extended
-        Items = @($ManifestItems)
+        Items              = @($ManifestItems)
     }
 
     $Manifest | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $Path -Encoding UTF8
@@ -511,7 +534,7 @@ function Confirm-SmbConnectionSecurity {
         [string]$UserName,
 
         [Parameter(Mandatory = $true)]
-        [ValidateSet('SMB2','SMB3')]
+        [ValidateSet('SMB2', 'SMB3')]
         [string]$MinimumDialect,
 
         [Parameter(Mandatory = $true)]
@@ -531,8 +554,8 @@ function Confirm-SmbConnectionSecurity {
 
     try {
         $Connections = @(Get-SmbConnection -ServerName $Server -ErrorAction Stop | Where-Object {
-            $_.ShareName -eq $Share -and $_.Credential -eq $UserName
-        })
+                $_.ShareName -eq $Share -and $_.Credential -eq $UserName
+            })
         if ($Connections.Count -ne 1) {
             throw 'No unambiguous SMB connection was found for the requested share and credential.'
         }
@@ -550,12 +573,19 @@ function Confirm-SmbConnectionSecurity {
 
     $Unknown = @()
     $Dialect = ''
-    if ($null -ne $Connection.PSObject.Properties['Dialect']) { $Dialect = [string]$Connection.Dialect }
+    if ($null -ne $Connection.PSObject.Properties['Dialect']) {
+        $Dialect = [string]$Connection.Dialect
+    }
     if ([string]::IsNullOrWhiteSpace($Dialect)) {
         $Unknown += 'dialect'
     }
     else {
-        $Pattern = if ($MinimumDialect -eq 'SMB3') { '^3\.\d+(\.\d+)?$' } else { '^[23]\.\d+(\.\d+)?$' }
+        $Pattern = if ($MinimumDialect -eq 'SMB3') {
+            '^3\.\d+(\.\d+)?$'
+        }
+        else {
+            '^[23]\.\d+(\.\d+)?$'
+        }
         if ($Dialect -notmatch $Pattern) {
             throw "SMB dialect '$Dialect' does not meet the required minimum '$MinimumDialect'."
         }
@@ -563,8 +593,12 @@ function Confirm-SmbConnectionSecurity {
 
     $Signed = $null
     $Encrypted = $null
-    if ($null -ne $Connection.PSObject.Properties['Signed'] -and $Connection.Signed -is [bool]) { $Signed = $Connection.Signed }
-    if ($null -ne $Connection.PSObject.Properties['Encrypted'] -and $Connection.Encrypted -is [bool]) { $Encrypted = $Connection.Encrypted }
+    if ($null -ne $Connection.PSObject.Properties['Signed'] -and $Connection.Signed -is [bool]) {
+        $Signed = $Connection.Signed
+    }
+    if ($null -ne $Connection.PSObject.Properties['Encrypted'] -and $Connection.Encrypted -is [bool]) {
+        $Encrypted = $Connection.Encrypted
+    }
     if ($Encrypted -ne $true -and $Signed -ne $true) {
         if ($Signed -eq $false -and $Encrypted -eq $false) {
             throw 'SMB integrity is required but the connection is neither signed nor encrypted.'
@@ -572,11 +606,17 @@ function Confirm-SmbConnectionSecurity {
         $Unknown += 'integrity'
     }
     if (-not $AllowUnencrypted) {
-        if ($Encrypted -eq $false) { throw 'SMB privacy is required but the connection is not encrypted.' }
-        if ($null -eq $Encrypted) { $Unknown += 'privacy' }
+        if ($Encrypted -eq $false) {
+            throw 'SMB privacy is required but the connection is not encrypted.'
+        }
+        if ($null -eq $Encrypted) {
+            $Unknown += 'privacy'
+        }
     }
     if ($Unknown.Count) {
-        if (-not $AllowUnverified) { throw "SMB properties cannot be verified: $($Unknown -join ', ')." }
+        if (-not $AllowUnverified) {
+            throw "SMB properties cannot be verified: $($Unknown -join ', ')."
+        }
         Write-Log -Level 'WARN' -Message "Compatibility enabled: AllowUnverifiedSmb. Unverified properties: $($Unknown -join ', ')."
     }
 
@@ -610,9 +650,13 @@ function Get-SmbMappingOption {
         Write-Log -Level 'WARN' -Message 'Compatibility enabled: AllowUnverifiedSmb uses a credentialed PSDrive without per-connection SMB controls.'
         return $null
     }
-    if (-not $AllowNtlmV2) { $Options.BlockNTLM = $true }
+    if (-not $AllowNtlmV2) {
+        $Options.BlockNTLM = $true
+    }
     foreach ($Requirement in @('RequireIntegrity', 'RequirePrivacy')) {
-        if ($Requirement -eq 'RequirePrivacy' -and $AllowUnencryptedSmb) { continue }
+        if ($Requirement -eq 'RequirePrivacy' -and $AllowUnencryptedSmb) {
+            continue
+        }
         if ($Command.Parameters.ContainsKey($Requirement)) {
             $Options[$Requirement] = $true
         }
@@ -692,9 +736,15 @@ function Send-Archive {
         return $RemoteArchive
     }
     finally {
-        if ($null -ne $MappingOptions) { $MappingOptions.Clear() }
-        if ($Mapped) { Remove-SmbMapping -RemotePath $PathInfo.ShareRoot -Force -ErrorAction Stop }
-        if ($DriveCreated) { Remove-PSDrive -Name $DriveName -Force -ErrorAction Stop }
+        if ($null -ne $MappingOptions) {
+            $MappingOptions.Clear()
+        }
+        if ($Mapped) {
+            Remove-SmbMapping -RemotePath $PathInfo.ShareRoot -Force -ErrorAction Stop
+        }
+        if ($DriveCreated) {
+            Remove-PSDrive -Name $DriveName -Force -ErrorAction Stop
+        }
     }
 }
 

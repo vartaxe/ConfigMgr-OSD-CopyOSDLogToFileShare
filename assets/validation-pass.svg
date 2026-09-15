@@ -1,11 +1,25 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="920" height="320" viewBox="0 0 920 320" role="img" aria-labelledby="title desc">
-<title id="title">Validation checklist illustration</title>
-<desc id="desc">Illustrative checklist only, not a validation result or live environment certification.</desc>
-<rect width="920" height="320" rx="22" fill="#0f172a"/>
-<rect x="24" y="24" width="872" height="272" rx="16" fill="#111827" stroke="#334155"/>
-<text x="48" y="68" font-family="Cascadia Mono, Consolas, monospace" font-size="20" fill="#93c5fd">PS&gt; .\build\Invoke-Validation.ps1</text>
-<text x="48" y="112" font-family="Cascadia Mono, Consolas, monospace" font-size="20" fill="#86efac">CHECK: Windows PowerShell 5.1 parser</text>
-<text x="48" y="152" font-family="Cascadia Mono, Consolas, monospace" font-size="20" fill="#86efac">CHECK: PSScriptAnalyzer and Pester</text>
-<text x="48" y="192" font-family="Cascadia Mono, Consolas, monospace" font-size="20" fill="#86efac">CHECK: Versions and exact-byte SHA-256 manifest</text>
-<text x="48" y="232" font-family="Cascadia Mono, Consolas, monospace" font-size="22" font-weight="700" fill="#0891B2">ILLUSTRATION ONLY - live testing pending</text>
+<svg xmlns="http://www.w3.org/2000/svg" width="920" height="360" viewBox="0 0 920 360" role="img" aria-labelledby="title desc">
+    <title id="title">Validation checklist illustration</title>
+    <desc id="desc">Required checks cover the Windows PowerShell 5.1 parser, PSScriptAnalyzer, Pester, versions, and exact-byte SHA-256 manifest. This illustration is not a test result. Live ConfigMgr, WinPE, and SMB validation remains pending.</desc>
+    <style>
+        svg { color-scheme: light dark; font-family: "Segoe UI", Arial, sans-serif; --surface: #f8fafc; --card: #ffffff; --text: #0f172a; --muted: #334155; --accent: #0e7490; --border: #b9dce5; }
+        .canvas { fill: var(--surface); }
+        .panel { fill: var(--card); stroke: var(--border); stroke-width: 2; }
+        text { fill: var(--text); }
+        .muted { fill: var(--muted); }
+        .status { fill: var(--accent); font-weight: 700; }
+        .command { font-family: Consolas, "Cascadia Mono", monospace; }
+        @media (prefers-color-scheme: dark) {
+            svg { --surface: #0f172a; --card: #162238; --text: #f1f5f9; --muted: #cbd5e1; --accent: #67e8f9; --border: #276477; }
+        }
+    </style>
+    <rect class="canvas" width="920" height="360" rx="24"/>
+    <rect class="panel" x="24" y="24" width="872" height="312" rx="16"/>
+    <text x="48" y="70" font-size="30" font-weight="700">Validation checklist</text>
+    <text class="command" x="48" y="114" font-size="22">PS&gt; .\build\Invoke-Validation.ps1</text>
+    <text x="48" y="158" font-size="24">Required: Windows PowerShell 5.1 parser</text>
+    <text x="48" y="198" font-size="24">Required: PSScriptAnalyzer and Pester</text>
+    <text x="48" y="238" font-size="24">Required: versions and exact-byte SHA-256 manifest</text>
+    <text class="status" x="48" y="282" font-size="24">ILLUSTRATION ONLY - not a test result</text>
+    <text class="muted" x="48" y="316" font-size="22">Live ConfigMgr, WinPE, and SMB testing: PENDING</text>
 </svg>

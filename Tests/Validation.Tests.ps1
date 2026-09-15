@@ -4,7 +4,9 @@ BeforeAll {
     function ConvertFrom-ValidationProcessOutput {
         param([AllowEmptyString()][string]$Text)
 
-        if (-not $Text.StartsWith('#< CLIXML', [StringComparison]::Ordinal)) { return $Text }
+        if (-not $Text.StartsWith('#< CLIXML', [StringComparison]::Ordinal)) {
+            return $Text
+        }
         $Records = [System.Management.Automation.PSSerializer]::Deserialize(
             ($Text -replace '^#< CLIXML\r?\n', ''))
         return (@($Records | Where-Object { $null -ne $_ } | ForEach-Object { $_.ToString() }) -join "`n")
@@ -38,7 +40,7 @@ BeforeAll {
         $StartInfo = [Diagnostics.ProcessStartInfo]::new()
         $StartInfo.FileName = Join-Path $PSHOME 'powershell.exe'
         $StartInfo.Arguments = '-NoProfile -NonInteractive -OutputFormat XML -ExecutionPolicy Bypass -File "' +
-            (Join-Path $script:FixtureRoot 'build\Invoke-Validation.ps1') + '" -Tag "' + $Tag + '"'
+        (Join-Path $script:FixtureRoot 'build\Invoke-Validation.ps1') + '" -Tag "' + $Tag + '"'
         if ($SkipChecksums) {
             $StartInfo.Arguments += ' -SkipChecksums'
         }
@@ -58,8 +60,8 @@ BeforeAll {
 
             return [pscustomobject]@{
                 ExitCode = $Process.ExitCode
-                Output = (ConvertFrom-ValidationProcessOutput $OutputTask.Result) + "`n" +
-                    (ConvertFrom-ValidationProcessOutput $ErrorTask.Result)
+                Output   = (ConvertFrom-ValidationProcessOutput $OutputTask.Result) + "`n" +
+                (ConvertFrom-ValidationProcessOutput $ErrorTask.Result)
             }
         }
         finally {

@@ -1,6 +1,15 @@
 # Design
 
-<p align="center"><img src="../assets/copylog-flow.svg" alt="Copy OSD Logs to File Share workflow: set hidden variables, validate environment and OSDisk, collect logs, create archive, upload via SMB, verify remote size, and clear variables" width="100%"></p>
+<p align="center">
+    <picture>
+        <source media="(max-width: 960px)" srcset="../assets/copylog-flow-compact.svg">
+        <img src="../assets/copylog-flow.svg" alt="Set log variables, collect standard logs, write Manifest.json, create a local ZIP, check TCP 445, upload and verify remote size, then clear credentials with native Task Sequence steps">
+    </picture>
+</p>
+
+[View the full-size collection workflow](../assets/copylog-flow.svg).
+
+Set log variables, collect standard logs, write `Manifest.json`, create a local ZIP, check TCP 445, then upload and verify remote byte size. Native Task Sequence steps clear credentials on success and failure. Extended logs remain opt-in.
 
 This utility uses these principles:
 

@@ -1,8 +1,82 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="260" viewBox="0 0 1400 260" role="img" aria-labelledby="title desc">
-<title id="title">Copy OSD Logs to File Share workflow</title>
-<desc id="desc">Task Sequence flow diagram</desc>
-<defs><filter id="shadow" x="-15%" y="-15%" width="130%" height="130%"><feDropShadow dx="0" dy="8" stdDeviation="8" flood-color="#0f172a" flood-opacity=".15"/></filter></defs>
-<rect width="1400" height="260" rx="24" fill="#f8fafc"/>
-<text x="40" y="50" font-family="Segoe UI, Inter, Arial" font-size="30" font-weight="700" fill="#0f172a">Copy OSD Logs to File Share workflow</text>
-<rect x="40" y="96" width="160" height="74" rx="18" fill="#fff" stroke="#0891B2" stroke-width="3" filter="url(#shadow)"/><circle cx="65" cy="121" r="15" fill="#0891B2"/><text x="65" y="127" text-anchor="middle" font-family="Segoe UI, Arial" font-size="16" font-weight="700" fill="#fff">1</text><text x="120.0" y="140" text-anchor="middle" font-family="Segoe UI, Arial" font-size="16" font-weight="600" fill="#0f172a">Set log variables</text><path d="M204 133h16" stroke="#4F46E5" stroke-width="4" stroke-linecap="round"/><path d="M217 126l8 7-8 7" fill="none" stroke="#4F46E5" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><rect x="224" y="96" width="160" height="74" rx="18" fill="#fff" stroke="#0891B2" stroke-width="3" filter="url(#shadow)"/><circle cx="249" cy="121" r="15" fill="#0891B2"/><text x="249" y="127" text-anchor="middle" font-family="Segoe UI, Arial" font-size="16" font-weight="700" fill="#fff">2</text><text x="304.0" y="140" text-anchor="middle" font-family="Segoe UI, Arial" font-size="16" font-weight="600" fill="#0f172a">Collect standard logs</text><path d="M388 133h16" stroke="#4F46E5" stroke-width="4" stroke-linecap="round"/><path d="M401 126l8 7-8 7" fill="none" stroke="#4F46E5" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><rect x="408" y="96" width="160" height="74" rx="18" fill="#fff" stroke="#0891B2" stroke-width="3" filter="url(#shadow)"/><circle cx="433" cy="121" r="15" fill="#0891B2"/><text x="433" y="127" text-anchor="middle" font-family="Segoe UI, Arial" font-size="16" font-weight="700" fill="#fff">3</text><text x="488.0" y="140" text-anchor="middle" font-family="Segoe UI, Arial" font-size="16" font-weight="600" fill="#0f172a">Write Manifest.json</text><path d="M572 133h16" stroke="#4F46E5" stroke-width="4" stroke-linecap="round"/><path d="M585 126l8 7-8 7" fill="none" stroke="#4F46E5" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><rect x="592" y="96" width="160" height="74" rx="18" fill="#fff" stroke="#0891B2" stroke-width="3" filter="url(#shadow)"/><circle cx="617" cy="121" r="15" fill="#0891B2"/><text x="617" y="127" text-anchor="middle" font-family="Segoe UI, Arial" font-size="16" font-weight="700" fill="#fff">4</text><text x="672.0" y="140" text-anchor="middle" font-family="Segoe UI, Arial" font-size="16" font-weight="600" fill="#0f172a">Create local ZIP</text><path d="M756 133h16" stroke="#4F46E5" stroke-width="4" stroke-linecap="round"/><path d="M769 126l8 7-8 7" fill="none" stroke="#4F46E5" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><rect x="776" y="96" width="160" height="74" rx="18" fill="#fff" stroke="#0891B2" stroke-width="3" filter="url(#shadow)"/><circle cx="801" cy="121" r="15" fill="#0891B2"/><text x="801" y="127" text-anchor="middle" font-family="Segoe UI, Arial" font-size="16" font-weight="700" fill="#fff">5</text><text x="856.0" y="140" text-anchor="middle" font-family="Segoe UI, Arial" font-size="16" font-weight="600" fill="#0f172a">TCP 445 preflight</text><path d="M940 133h16" stroke="#4F46E5" stroke-width="4" stroke-linecap="round"/><path d="M953 126l8 7-8 7" fill="none" stroke="#4F46E5" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><rect x="960" y="96" width="160" height="74" rx="18" fill="#fff" stroke="#0891B2" stroke-width="3" filter="url(#shadow)"/><circle cx="985" cy="121" r="15" fill="#0891B2"/><text x="985" y="127" text-anchor="middle" font-family="Segoe UI, Arial" font-size="16" font-weight="700" fill="#fff">6</text><text x="1040.0" y="140" text-anchor="middle" font-family="Segoe UI, Arial" font-size="16" font-weight="600" fill="#0f172a">Upload + verify</text><path d="M1124 133h16" stroke="#4F46E5" stroke-width="4" stroke-linecap="round"/><path d="M1137 126l8 7-8 7" fill="none" stroke="#4F46E5" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><rect x="1144" y="96" width="160" height="74" rx="18" fill="#fff" stroke="#0891B2" stroke-width="3" filter="url(#shadow)"/><circle cx="1169" cy="121" r="15" fill="#0891B2"/><text x="1169" y="127" text-anchor="middle" font-family="Segoe UI, Arial" font-size="16" font-weight="700" fill="#fff">7</text><text x="1224.0" y="140" text-anchor="middle" font-family="Segoe UI, Arial" font-size="16" font-weight="600" fill="#0f172a">Clear variables</text>
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="340" viewBox="0 0 1400 340" role="img" aria-labelledby="title desc">
+    <title id="title">Copy OSD Logs to File Share workflow</title>
+    <desc id="desc">Set custom log variables, collect the standard log profile, write Manifest.json, create a local ZIP, check TCP 445, upload and verify remote byte size, then clear credentials with native Task Sequence steps. Cleanup must also run on failure. Extended logs are opt-in.</desc>
+    <style>
+        svg { color-scheme: light dark; font-family: "Segoe UI", Arial, sans-serif; --surface: #f8fafc; --card: #ffffff; --text: #0f172a; --muted: #334155; --accent: #0e7490; --on-accent: #ffffff; --border: #b9dce5; }
+        .canvas { fill: var(--surface); }
+        .card { fill: var(--card); stroke: var(--border); stroke-width: 2; }
+        text { fill: var(--text); }
+        .muted { fill: var(--muted); }
+        .badge, .arrowhead { fill: var(--accent); }
+        .number { fill: var(--on-accent); font-size: 22px; font-weight: 700; text-anchor: middle; }
+        .label { font-size: 22px; font-weight: 600; text-anchor: middle; }
+        .arrow { fill: none; stroke: var(--accent); stroke-width: 3; marker-end: url(#arrow); }
+        @media (prefers-color-scheme: dark) {
+            svg { --surface: #0f172a; --card: #162238; --text: #f1f5f9; --muted: #cbd5e1; --accent: #67e8f9; --on-accent: #083344; --border: #276477; }
+        }
+    </style>
+    <defs>
+        <marker id="arrow" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="6" markerHeight="6" orient="auto">
+            <path class="arrowhead" d="M0 0l8 4-8 4z"/>
+        </marker>
+    </defs>
+    <rect class="canvas" width="1400" height="340" rx="24"/>
+    <text x="40" y="54" font-size="32" font-weight="700">Copy OSD Logs to File Share workflow</text>
+    <g>
+        <rect class="card" x="40" y="94" width="168" height="140" rx="16"/>
+        <circle class="badge" cx="124" cy="124" r="19"/>
+        <text class="number" x="124" y="132">1</text>
+        <text class="label" x="124" y="178">Set log</text>
+        <text class="label" x="124" y="208">variables</text>
+    </g>
+    <path class="arrow" d="M212 164h16"/>
+    <g>
+        <rect class="card" x="232" y="94" width="168" height="140" rx="16"/>
+        <circle class="badge" cx="316" cy="124" r="19"/>
+        <text class="number" x="316" y="132">2</text>
+        <text class="label" x="316" y="178">Collect</text>
+        <text class="label" x="316" y="208">standard logs</text>
+    </g>
+    <path class="arrow" d="M404 164h16"/>
+    <g>
+        <rect class="card" x="424" y="94" width="168" height="140" rx="16"/>
+        <circle class="badge" cx="508" cy="124" r="19"/>
+        <text class="number" x="508" y="132">3</text>
+        <text class="label" x="508" y="178">Write</text>
+        <text class="label" x="508" y="208">Manifest.json</text>
+    </g>
+    <path class="arrow" d="M596 164h16"/>
+    <g>
+        <rect class="card" x="616" y="94" width="168" height="140" rx="16"/>
+        <circle class="badge" cx="700" cy="124" r="19"/>
+        <text class="number" x="700" y="132">4</text>
+        <text class="label" x="700" y="178">Create</text>
+        <text class="label" x="700" y="208">local ZIP</text>
+    </g>
+    <path class="arrow" d="M788 164h16"/>
+    <g>
+        <rect class="card" x="808" y="94" width="168" height="140" rx="16"/>
+        <circle class="badge" cx="892" cy="124" r="19"/>
+        <text class="number" x="892" y="132">5</text>
+        <text class="label" x="892" y="178">TCP 445</text>
+        <text class="label" x="892" y="208">preflight</text>
+    </g>
+    <path class="arrow" d="M980 164h16"/>
+    <g>
+        <rect class="card" x="1000" y="94" width="168" height="140" rx="16"/>
+        <circle class="badge" cx="1084" cy="124" r="19"/>
+        <text class="number" x="1084" y="132">6</text>
+        <text class="label" x="1084" y="178">Upload</text>
+        <text class="label" x="1084" y="208">and verify</text>
+    </g>
+    <path class="arrow" d="M1172 164h16"/>
+    <g>
+        <rect class="card" x="1192" y="94" width="168" height="140" rx="16"/>
+        <circle class="badge" cx="1276" cy="124" r="19"/>
+        <text class="number" x="1276" y="132">7</text>
+        <text class="label" x="1276" y="178">Clear</text>
+        <text class="label" x="1276" y="208">variables</text>
+    </g>
+    <text x="40" y="282" font-size="24">Native Task Sequence steps clear credentials on success and failure.</text>
+    <text class="muted" x="40" y="316" font-size="22">Standard profile shown; extended logs are opt-in.</text>
 </svg>
