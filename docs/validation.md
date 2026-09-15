@@ -35,6 +35,9 @@ EditorConfig describes editing conventions, not hash normalization: regenerate t
 
 Neither checksums nor a CI pass authenticate a publisher or prove live deployment behavior. The validation illustration is not a test transcript.
 Repository checks include source-pattern tests and behavioral tests using real filesystem copies and ZIP manifests; Task Sequence and network interactions are mocked.
+Each orchestration case uses its own source, staging, and log directories so files from one case are not overwritten by the next.
+Process-exit fixtures write their intended inputs once and decode structured PowerShell output, so console line wrapping does not change diagnostic assertions. Their 60-second child-process timeout and nonzero-exit checks remain enforced.
+The credential regression clears any caller-local `Credential` variable, then runs the orchestration with a distinct local test credential. This prevents PowerShell's parent-scope lookup from hiding an incorrect `-Credential $Credential` argument in place of `-Credential $script:Credential`. The test checks object identity, the supplied username, and password origin without printing the password.
 
 ## Required CI checks
 

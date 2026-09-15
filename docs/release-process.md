@@ -15,5 +15,5 @@ Current scope is **pre-release review of version 1.0.0**. Do not merge, tag, or 
 `CHECKSUMS.txt` hashes the **checked-out file bytes**. Follow `.gitattributes`: PowerShell `.ps1` files use **CRLF**; other text files use **LF**, including Markdown, YAML, SVG, `LICENSE`, and `VERSION`. These repository rules avoid dependence on a contributor's global `core.autocrlf` setting.
 CI keeps read-only contents permission, validates tags, and does not publish releases.
 Publishing is a separate `.github/workflows/release.yml` workflow with `contents: write`, triggered only by a maintainer-pushed `v*.*.*` tag or manual dispatch.
-It re-runs the validator against the tagged revision with `-Tag`, then publishes a GitHub prerelease holding a `git archive` zip and its SHA-256 sidecar, using `--verify-tag` so a missing or mismatched tag fails.
+Checkout and archiving explicitly select `refs/tags/<tag>`, so a same-named branch cannot supply different code. The validator checks tag/version agreement before publishing a GitHub prerelease holding a `git archive` zip and its SHA-256 sidecar. `--verify-tag` requires the remote tag to exist and prevents release creation from creating a tag.
 Publication does not change release status: v1.0.0 stays a pre-release candidate until live validation is complete.

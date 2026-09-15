@@ -438,8 +438,12 @@ Describe 'Orchestration with mocked Task Sequence and network' {
         $script:RetryDelaySeconds = 0
         $script:TimeoutSeconds = 5
         $script:IncludeExtendedLogs = $false
-        $script:Pending = Join-Path $TestDrive ('PendingOSDLogs-' + [guid]::NewGuid().ToString('N'))
-        $LogFolder = Join-Path $TestDrive ('TaskSequence-' + [guid]::NewGuid().ToString('N'))
+        $RuntimeRoot = Join-Path $TestDrive ('Runtime-' + [guid]::NewGuid().ToString('N'))
+        $script:WindowsRoot = Join-Path $RuntimeRoot 'Windows'
+        $script:ProgramDataRoot = Join-Path $RuntimeRoot 'ProgramData'
+        $script:SystemDriveRoot = $RuntimeRoot
+        $script:Pending = Join-Path $RuntimeRoot 'PendingOSDLogs'
+        $LogFolder = Join-Path $RuntimeRoot 'TaskSequence'
         [void](New-Item -Path $LogFolder -ItemType Directory -Force)
         $script:Variables['_SMSTSLogPath'] = $LogFolder
         Mock Get-TaskSequenceEnvironment { $script:TaskSequenceEnvironment }
@@ -461,18 +465,27 @@ Describe 'Orchestration with mocked Task Sequence and network' {
     It 'passes the PSCredential constructed from Task Sequence variables to Send-Archive' {
         $script:Credential = $null
         $script:ObservedCredential = $null
+        $script:ObservedScriptCredential = $false
         Remove-Variable -Name Credential -ErrorAction SilentlyContinue
         $script:Variables['OSDLogUserName'] = 'CONTOSO\test-user'
         $script:Variables['OSDLogPassword'] = 'test-secret-only'
         Mock Send-Archive {
             $script:ObservedCredential = $Credential
+            $script:ObservedScriptCredential = [object]::ReferenceEquals($Credential, $script:Credential)
             '\\fileserver.contoso.com\OSDLogs$\Logs\logs.zip'
         }
 
-        & $script:MainBody
+        $Shadow = New-Object System.Management.Automation.PSCredential (
+            'CONTOSO\scope-sentinel', (New-Object System.Security.SecureString))
+        & {
+            # A distinct local credential exposes unqualified references without prompting for credentials.
+            Set-Variable -Name Credential -Value $Shadow -Scope Local
+            . $script:MainBody
+        }
 
         $script:ObservedExitCode | Should -Be 0
         Should -Invoke Send-Archive -Times 1 -Exactly
+        $script:ObservedScriptCredential | Should -BeTrue
         $script:ObservedCredential | Should -BeOfType [System.Management.Automation.PSCredential]
         $script:ObservedCredential.UserName | Should -BeExactly $script:Variables['OSDLogUserName']
         $script:ObservedCredential.Password | Should -BeOfType [System.Security.SecureString]

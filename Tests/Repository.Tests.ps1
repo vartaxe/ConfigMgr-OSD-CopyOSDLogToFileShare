@@ -45,14 +45,14 @@ Describe 'Repository contract' {
         $Unqualified = @($Orchestration.FindAll({
             param($Node)
             $Node -is [System.Management.Automation.Language.VariableExpressionAst] -and
-            $Node.VariablePath.UserPath -ceq 'Credential'
+            $Node.VariablePath.UserPath -ieq 'Credential'
         }, $true))
         $Unqualified.Count | Should -Be 0
 
         $SendArchive = @($Orchestration.FindAll({
             param($Node)
             $Node -is [System.Management.Automation.Language.CommandAst] -and
-            $Node.GetCommandName() -ceq 'Send-Archive'
+            $Node.GetCommandName() -ieq 'Send-Archive'
         }, $true))
         $SendArchive.Count | Should -Be 1
         $SendArchive[0].Extent.Text | Should -Match '-Credential\s+\$script:Credential\b'
@@ -95,6 +95,8 @@ Describe 'Repository contract' {
 
         $ReleaseWorkflow = Get-Content -LiteralPath (Join-Path $script:Root '.github\workflows\release.yml') -Raw
         $ReleaseWorkflow | Should -Match "(?m)^\s*-\s*'v\*\.\*\.\*'\s*$"
+        $ReleaseWorkflow | Should -Match '(?m)^\s+ref:\s+refs/tags/\$\{\{\s*env\.RELEASE_TAG\s*\}\}\s*$'
+        $ReleaseWorkflow | Should -Match '(?m)^\s+git archive[^\r\n]+"refs/tags/\$env:RELEASE_TAG"\s*$'
         foreach ($RequiredText in 'Validate tagged revision', 'Create release archive', 'Get-FileHash', 'Publish GitHub prerelease', 'gh release create', '--verify-tag') {
             $ReleaseWorkflow | Should -Match ([regex]::Escape($RequiredText))
         }
