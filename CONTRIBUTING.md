@@ -4,12 +4,16 @@ Contributions are welcome when they keep the project focused, readable, and safe
 
 Before opening a pull request:
 
-1. Run `powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\build\Invoke-Validation.ps1` with Pester 5.7.1 and PSScriptAnalyzer 1.25.0 installed.
+1. Install the pinned development modules and run `.\build\Invoke-Validation.ps1` in Windows PowerShell 5.1 as described in [validation](docs/validation.md).
 2. Keep examples generalized.
 3. Do not add organization-specific defaults.
 4. Do not introduce credential logging.
 5. Update documentation when behavior changes.
+6. Add focused Pester coverage for behavioral fixes, and distinguish mocks from live tests.
+7. Regenerate `CHECKSUMS.txt` after all file changes, including documentation and workflow updates, following the [checkout convention](docs/release-process.md#checksum-checkout-convention). Run validation again before pushing.
 
-Use `-SkipChecksums` only during the developer loop. Regenerate the manifest after final edits and run full validation without that switch.
-Follow [`.gitattributes`](.gitattributes): PowerShell `.ps1` files use CRLF and other text files use LF. Regenerate `CHECKSUMS.txt` after every byte change; see [validation](docs/validation.md).
+Use `-SkipChecksums` only during the developer loop while source edits await manifest regeneration. Final validation must run without that switch.
+
+The production script must remain self-contained, target Windows PowerShell 5.1, and retain secure defaults. Review analyzer warnings individually; any suppression needs a precise justification. Never include credentials or unsanitized logs in a pull request.
+
 Record live environment results separately from mocked tests. Do not represent the pre-release 1.0.0 candidate as a published or live-certified release.

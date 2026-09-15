@@ -5,7 +5,7 @@
 Collect, archive, and upload ConfigMgr OSD logs to an SMB share with retries, size verification, and CMTrace logging.
 Version **1.0.0 is pre-release**; live ConfigMgr, WinPE, and SMB validation is pending.
 
-[Quick start](#quick-start) · [Deployment](docs/deployment.md) · [Compatibility](docs/compatibility.md) · [Security](SECURITY.md) · [Troubleshooting](docs/troubleshooting.md)
+[Quick start](#quick-start) | [Deployment](docs/deployment.md) | [Compatibility](docs/compatibility.md) | [Security](SECURITY.md) | [Troubleshooting](docs/troubleshooting.md)
 
 [![Version](https://img.shields.io/badge/version-1.0.0-2671be)](VERSION)
 [![CI](https://github.com/vartaxe/ConfigMgr-OSD-CopyOSDLogToFileShare/actions/workflows/ci.yml/badge.svg)](https://github.com/vartaxe/ConfigMgr-OSD-CopyOSDLogToFileShare/actions/workflows/ci.yml)
