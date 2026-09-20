@@ -30,6 +30,8 @@ CI remains separate: `.github/workflows/ci.yml` has read-only contents permissio
 The published v1.0.0 tag, ZIP, and SHA-256 sidecar are immutable. Do not move or recreate the tag, overwrite the assets, or dispatch v1.0.0 to repackage later changes.
 Documentation-only updates on `main` are not repackaged into the old ZIP. They do not require a new version entry or imply a new release.
 
+The maintainer authorized a one-time exception for the [2026-09-20 v1.0.0 prerelease reissue](../RELEASE-NOTES.md#reissue-2026-09-20): replace its tag, ZIP, and sidecar together using one validated commit, retain private recovery copies, and disclose the old and new identities. This exception does not authorize later silent replacements. Normal future changes use a new version.
+
 Maintainer-approved edits to the public GitHub release body may clarify status or documentation links independently of the immutable `RELEASE-NOTES.md` snapshot in the tag and ZIP. Those differences do not change the tagged artifacts or establish live certification.
 
 ## Checksum checkout convention

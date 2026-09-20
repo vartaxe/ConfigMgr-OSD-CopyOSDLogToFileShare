@@ -55,7 +55,7 @@ Collecting logs after an operating system deployment should not require a large 
 
 ## Validation status
 
-Windows PowerShell 5.1 static analysis, mocked Pester tests, checksum validation, and [GitHub Actions validation](https://github.com/vartaxe/ConfigMgr-OSD-CopyOSDLogToFileShare/actions/runs/35004030520) passed for the published v1.0.0 revision. Later changes require their own validation.
+Windows PowerShell 5.1 static analysis, mocked Pester tests, checksum validation, and [GitHub Actions validation](https://github.com/vartaxe/ConfigMgr-OSD-CopyOSDLogToFileShare/actions/runs/35004030520) passed for the original 2026-09-15 v1.0.0 revision. The [2026-09-20 reissue notice](RELEASE-NOTES.md#reissue-2026-09-20) distinguishes the replacement; each revision requires its own validation.
 
 Static checks and mocked unit tests do not prove live ConfigMgr, WinPE, or SMB behavior. No live platform is certified here.
 See the [validation procedure and pending scenarios](docs/validation.md). CI badges report workflow state, not deployment certification.
