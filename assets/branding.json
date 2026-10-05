@@ -1,0 +1,8 @@
+{
+  "title": "Copy OSD Logs to File Share",
+  "compactTitle": ["Copy OSD Logs", "to File Share"],
+  "subtitle": "Log collection for ConfigMgr deployment",
+  "compactSubtitle": "Log collection for ConfigMgr",
+  "script": "Copy-OSDLogToFileShare.ps1",
+  "description": "Collect and upload deployment logs to a file share during ConfigMgr OSD. Windows PowerShell 5.1."
+}
