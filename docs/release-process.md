@@ -12,7 +12,7 @@ Publish **v1.0.0** as a prerelease candidate. Verify its downloaded assets, then
 
 1. Keep `VERSION`, both production-script version literals, badges, examples, and the current changelog aligned to the intended three-part numeric version.
 2. Add a nonempty `## v1.0.0` section to `RELEASE-NOTES.md` for this release. The workflow selects the exact tag's section. For a later version, replace the numeric version everywhere it identifies current release content.
-3. Use Windows PowerShell 5.1 with pinned Pester 5.7.1 and PSScriptAnalyzer 1.25.0 modules from an approved source; do not bypass publisher verification. See [validation prerequisites](validation.md#prerequisites-and-scope).
+3. Use Windows PowerShell 5.1 with pinned Pester 6.2.0 and PSScriptAnalyzer 1.25.0 modules from an approved source; do not bypass publisher verification. Pester 6.2.0 supports Windows PowerShell 5.1; follow its official v5-to-v6 migration guidance when changing test behavior. See [validation prerequisites](validation.md#prerequisites-and-scope).
 4. Finish all changes, normalize maintained text to the [checkout convention](#checksum-checkout-convention), and regenerate `CHECKSUMS.txt` **last**.
 5. Run the full validator with `-Tag v1.0.0` and without `-SkipChecksums`. This verifies version agreement without creating a tag.
 6. Before publication, validate the exact committed revision, a fresh checkout, and the **extracted release ZIP**. The existing `git archive` flow honors this repository's `.gitattributes`. Check the produced file bytes against the manifest rather than inferring them from Git's stored blobs.

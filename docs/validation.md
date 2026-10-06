@@ -14,7 +14,7 @@ The automated suite checks source integrity and isolated behavior. ConfigMgr, Wi
 
 ## Prerequisites and scope
 
-Use the same pinned development modules as CI: Pester 5.7.1 and PSScriptAnalyzer 1.25.0. The validator explicitly requires Windows PowerShell 5.1 and those exact module versions.
+Use the same pinned development modules as CI: Pester 6.2.0 and PSScriptAnalyzer 1.25.0. Pester 6.2.0 supports Windows PowerShell 5.1; its v5-to-v6 migration guidance requires default mocks for filtered mocks that must also handle unmatched calls. The validator explicitly requires Windows PowerShell 5.1 and those exact module versions.
 Use an approved package source and trust policy; do not bypass publisher verification.
 It analyzes `Scripts`, `Tests`, and `build`, checks `VERSION` against the production script's literal version assignment, and verifies `CHECKSUMS.txt`.
 Parser errors, analyzer warnings/errors, missing modules, failed, skipped, or not-run Pester tests, failed discovery, zero discovered tests, and manifest/version errors return a nonzero process exit.
@@ -22,7 +22,7 @@ Parser errors, analyzer warnings/errors, missing modules, failed, skipped, or no
 If the modules are missing, install them from your approved source and trust policy:
 
 ```powershell
-Install-Module Pester -RequiredVersion '5.7.1' -Repository PSGallery -Scope CurrentUser -Force
+Install-Module Pester -RequiredVersion '6.2.0' -Repository PSGallery -Scope CurrentUser -Force
 Install-Module PSScriptAnalyzer -RequiredVersion '1.25.0' -Repository PSGallery -Scope CurrentUser -Force
 ```
 

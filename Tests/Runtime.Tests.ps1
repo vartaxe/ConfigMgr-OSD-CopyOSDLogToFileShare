@@ -410,7 +410,18 @@ Describe 'Runtime behavior' {
             }
             $script:MappingCommand = [pscustomobject]@{Parameters = $Parameters }
             $script:AllowNtlmV2 = -not $Parameters.ContainsKey('BlockNTLM')
-            Mock Get-Command { $script:MappingCommand } -ParameterFilter { $Name -eq 'New-SmbMapping' }
+            Mock Get-Command {
+                if ($Name -eq 'New-SmbMapping') {
+                    $script:MappingCommand
+                }
+                elseif ($Name -eq 'Get-SmbConnection') {
+                    [pscustomobject]@{ Name = 'Get-SmbConnection'; Parameters = @{} }
+                }
+                else {
+                    $null
+                }
+            }
+            Mock Get-SmbConnection { $script:Connection }
             Mock Get-ItemProperty { [pscustomobject]@{LmCompatibilityLevel = 5 } } -ParameterFilter { $Name -eq 'LmCompatibilityLevel' }
             Mock Test-TcpPort { $true }
             Mock Get-SmbMapping { @() }
