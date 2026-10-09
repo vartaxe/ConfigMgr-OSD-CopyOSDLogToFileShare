@@ -10,7 +10,7 @@ Publish **v1.0.0** as a prerelease candidate. Verify its downloaded assets, then
 
 ## Prepare a release
 
-1. Keep `VERSION`, both production-script version literals, badges, examples, and the current changelog aligned to the intended three-part numeric version.
+1. Keep `VERSION`, the production script's version assignment and help header, badges, examples, and the current changelog aligned to the intended three-part numeric version. The standalone production script is maintained only in `Scripts/Copy-OSDLogToFileShare.ps1`.
 2. Add a nonempty `## v1.0.0` section to `RELEASE-NOTES.md` for this release. The workflow selects the exact tag's section. For a later version, replace the numeric version everywhere it identifies current release content.
 3. Use Windows PowerShell 5.1 with pinned Pester 6.2.0 and PSScriptAnalyzer 1.25.0 modules from an approved source; do not bypass publisher verification. Pester 6.2.0 supports Windows PowerShell 5.1; follow its official v5-to-v6 migration guidance when changing test behavior. See [validation prerequisites](validation.md#prerequisites-and-scope).
 4. Finish all changes, normalize maintained text to the [checkout convention](#checksum-checkout-convention), and regenerate `CHECKSUMS.txt` **last**.

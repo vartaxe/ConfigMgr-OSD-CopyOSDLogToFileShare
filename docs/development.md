@@ -66,3 +66,17 @@ PSScriptAnalyzer, Pester, version/tag, and checksum gates. After any file change
 normalize line endings and regenerate `CHECKSUMS.txt` last using the documented
 [release process](release-process.md). A banner-only change still changes source
 hashes and must not silently replace an already published release ZIP.
+
+## Bounded runtime cleanup
+
+`Get-LogSourceResult` is the single constructor for the collection manifest's
+`Name`, `Source`, `Status`, and `Message` fields. `Copy-LogSource` still appends
+one result at the original success, missing-source, or error boundary, suppresses
+collection output, and sanitizes failures before recording or logging them.
+The helper stays inside the standalone production script; no runtime dependency,
+parameter, retry, upload, cleanup, or exit-code behavior changes.
+
+Regression tests cover the result schema and collection outcomes. The release
+guide now identifies the single maintained script and its assignment/help version
+values, rather than implying duplicate production copies. Validation remains
+mocked or local-only; no live SMB or ConfigMgr validation is claimed.
