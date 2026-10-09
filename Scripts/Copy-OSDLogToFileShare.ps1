@@ -213,7 +213,8 @@ function Get-SafeErrorMessage {
         'Per-connection SMB controls are unavailable. An explicit AllowUnverifiedSmb decision is required.',
         'Per-connection NTLM blocking is unavailable. An explicit AllowNtlmV2 decision with an existing NTLMv2-only client policy is required.',
         'AllowNtlmV2 requires an existing LmCompatibilityLevel of 3 through 5. No policy was changed.',
-        'An SMB mapping already exists for the destination. It will not be reused or removed.'
+        'An SMB mapping already exists for the destination. It will not be reused or removed.',
+        'SMB connection cleanup failed after verified upload. Pending local archive retained.'
     )
     if ($Exception.Message -cin $KnownMessages) {
         return $Exception.Message
@@ -407,6 +408,26 @@ function Add-LogSource {
         })
 }
 
+function Get-LogSourceResult {
+    param(
+        [Parameter(Mandatory = $true)]
+        $Source,
+
+        [Parameter(Mandatory = $true)]
+        [string]$Status,
+
+        [AllowEmptyString()]
+        [string]$Message = ''
+    )
+
+    return [pscustomobject]@{
+        Name    = $Source.Name
+        Source  = $Source.Path
+        Status  = $Status
+        Message = $Message
+    }
+}
+
 function Copy-LogSource {
     param(
         [Parameter(Mandatory = $true)]
@@ -424,22 +445,12 @@ function Copy-LogSource {
 
     try {
         if ([string]::IsNullOrWhiteSpace($Source.Path)) {
-            [void]$ManifestItems.Add([pscustomobject]@{
-                    Name    = $Source.Name
-                    Source  = $Source.Path
-                    Status  = 'NotFound'
-                    Message = 'Source path is empty.'
-                })
+            [void]$ManifestItems.Add((Get-LogSourceResult -Source $Source -Status 'NotFound' -Message 'Source path is empty.'))
             return
         }
 
         if (-not (Test-Path -LiteralPath $Source.Path)) {
-            [void]$ManifestItems.Add([pscustomobject]@{
-                    Name    = $Source.Name
-                    Source  = $Source.Path
-                    Status  = 'NotFound'
-                    Message = ''
-                })
+            [void]$ManifestItems.Add((Get-LogSourceResult -Source $Source -Status 'NotFound'))
             return
         }
 
@@ -461,21 +472,11 @@ function Copy-LogSource {
             Copy-Item -LiteralPath $Source.Path -Destination $Destination -Force -ErrorAction Stop
         }
 
-        [void]$ManifestItems.Add([pscustomobject]@{
-                Name    = $Source.Name
-                Source  = $Source.Path
-                Status  = 'Collected'
-                Message = ''
-            })
+        [void]$ManifestItems.Add((Get-LogSourceResult -Source $Source -Status 'Collected'))
     }
     catch {
         $SafeError = Get-SafeErrorMessage -ErrorRecord $_
-        [void]$ManifestItems.Add([pscustomobject]@{
-                Name    = $Source.Name
-                Source  = $Source.Path
-                Status  = 'Error'
-                Message = $SafeError
-            })
+        [void]$ManifestItems.Add((Get-LogSourceResult -Source $Source -Status 'Error' -Message $SafeError))
         Write-Log -Level 'WARN' -Message "Source collection failed: $($Source.Path); $SafeError"
     }
 }
@@ -696,6 +697,9 @@ function Send-Archive {
     $DriveName = 'OSDLOG' + ([guid]::NewGuid().ToString('N').Substring(0, 8))
     $Mapped = $false
     $DriveCreated = $false
+    $RemoteArchive = $null
+    $TransferError = $null
+    $CleanupFailures = New-Object System.Collections.ArrayList
 
     try {
         if (-not $AllowUnverifiedSmb -and $null -eq (Get-Command Get-SmbConnection -ErrorAction SilentlyContinue)) {
@@ -731,24 +735,55 @@ function Send-Archive {
             throw "Remote archive size mismatch. Local=$LocalLength Remote=$RemoteLength"
         }
 
-        return $RemoteArchive
+    }
+    catch {
+        $TransferError = $_
     }
     finally {
-        if ($null -ne $MappingOptions) {
-            $MappingOptions.Clear()
+        try {
+            if ($Mapped) {
+                Remove-SmbMapping -RemotePath $PathInfo.ShareRoot -Force -ErrorAction Stop
+            }
         }
-        if ($Mapped) {
-            Remove-SmbMapping -RemotePath $PathInfo.ShareRoot -Force -ErrorAction Stop
+        catch {
+            [void]$CleanupFailures.Add('SMB mapping')
+            Write-Log -Level 'ERROR' -Message "SMB mapping cleanup failed: $(Get-SafeErrorMessage -ErrorRecord $_)"
         }
-        if ($DriveCreated) {
-            Remove-PSDrive -Name $DriveName -Force -ErrorAction Stop
+        try {
+            if ($DriveCreated) {
+                Remove-PSDrive -Name $DriveName -Force -ErrorAction Stop
+            }
         }
+        catch {
+            [void]$CleanupFailures.Add('PSDrive')
+            Write-Log -Level 'ERROR' -Message "PSDrive cleanup failed: $(Get-SafeErrorMessage -ErrorRecord $_)"
+        }
+        try {
+            if ($null -ne $MappingOptions) {
+                $MappingOptions.Clear()
+            }
+        }
+        catch {
+            [void]$CleanupFailures.Add('mapping options')
+            Write-Log -Level 'ERROR' -Message "SMB mapping option cleanup failed: $(Get-SafeErrorMessage -ErrorRecord $_)"
+        }
+    }
+
+    if ($null -ne $TransferError) {
+        throw $TransferError
+    }
+
+    return [pscustomobject]@{
+        RemoteArchive    = $RemoteArchive
+        CleanupSucceeded = ($CleanupFailures.Count -eq 0)
+        CleanupFailures  = @($CleanupFailures)
     }
 }
 
 $ExitCode = 1
 $StagingRoot = $null
 $ArchivePath = $null
+$UploadVerifiedWithCleanupFailure = $false
 
 try {
     Add-Type -AssemblyName System.IO.Compression.FileSystem
@@ -855,9 +890,13 @@ try {
     for ($Attempt = 1; $Attempt -le $RetryCount; $Attempt++) {
         try {
             Write-Log -Message "Upload attempt $Attempt of $RetryCount."
-            $RemoteArchive = Send-Archive -ArchivePath $ArchivePath -DestinationShare $DestinationShare -Credential $script:Credential -TimeoutSeconds $TimeoutSeconds
-            Write-Log -Message "Upload verified: $RemoteArchive"
+            $UploadResult = Send-Archive -ArchivePath $ArchivePath -DestinationShare $DestinationShare -Credential $script:Credential -TimeoutSeconds $TimeoutSeconds
+            Write-Log -Message "Upload verified: $($UploadResult.RemoteArchive)"
             $Uploaded = $true
+            if (-not $UploadResult.CleanupSucceeded) {
+                $UploadVerifiedWithCleanupFailure = $true
+                Write-Log -Level 'ERROR' -Message "Upload was verified, but SMB connection cleanup failed: $($UploadResult.CleanupFailures -join ', ')."
+            }
             break
         }
         catch {
@@ -870,6 +909,9 @@ try {
 
     if (-not $Uploaded) {
         throw "Upload failed after $RetryCount attempt(s). Pending local archive retained: $ArchivePath"
+    }
+    if ($UploadVerifiedWithCleanupFailure) {
+        throw 'SMB connection cleanup failed after verified upload. Pending local archive retained.'
     }
 
     Remove-Item -LiteralPath $StagingRoot -Recurse -Force -ErrorAction Stop
@@ -885,7 +927,10 @@ finally {
     $script:Credential = $null
 }
 
-if ($ExitCode -eq 0) {
+if ($UploadVerifiedWithCleanupFailure) {
+    Write-Output 'OSD log archive uploaded and verified, but SMB connection cleanup failed. See CopyOSDLogs.log.'
+}
+elseif ($ExitCode -eq 0) {
     Write-Output 'OSD log archive uploaded and verified successfully.'
 }
 else {

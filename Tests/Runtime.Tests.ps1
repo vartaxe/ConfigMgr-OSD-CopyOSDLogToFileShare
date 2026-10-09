@@ -44,6 +44,23 @@ Describe 'Runtime behavior' {
     }
 
     Describe 'Collection and archive behavior' {
+        It 'keeps the manifest result schema for <Status>' -Tag 'Cleanup' -ForEach @(
+            @{ Status = 'NotFound'; Message = 'Source path is empty.' }
+            @{ Status = 'Collected'; Message = '' }
+            @{ Status = 'Error'; Message = 'Safe failure category.' }
+        ) {
+            $Source = [pscustomobject]@{ Name = 'TS'; Path = 'C:\source[1]'; Recurse = $true }
+            $Output = @(Get-LogSourceResult -Source $Source -Status $Status -Message $Message)
+            $Output.Count | Should -Be 1
+            $Output[0] | Should -BeOfType [pscustomobject]
+            ($Output[0].PSObject.Properties.Name -join ',') | Should -BeExactly 'Name,Source,Status,Message'
+            $Output[0].Name | Should -BeExactly $Source.Name
+            $Output[0].Source | Should -BeExactly $Source.Path
+            $Output[0].Status | Should -BeExactly $Status
+            $Output[0].Message | Should -BeExactly $Message
+            (Get-LogSourceResult -Source $Source -Status $Status).Message | Should -BeExactly ''
+        }
+
         It 'accepts an initially empty source list and missing optional paths' {
             $Sources = New-Object System.Collections.ArrayList
             Add-LogSource -List $Sources -Name Missing -Path ''
@@ -60,8 +77,29 @@ Describe 'Runtime behavior' {
             $Source = [pscustomobject]@{ Name = 'TS'; Path = $SourceRoot; Recurse = $true }
             Copy-LogSource -Source $Source -DestinationRoot $TestDrive -ManifestItems $Manifest
             $Manifest[0].Status | Should -Be 'Collected'
+            $Manifest.Count | Should -Be 1
+            $Manifest[0].Name | Should -BeExactly 'TS'
+            $Manifest[0].Source | Should -BeExactly $SourceRoot
+            $Manifest[0].Message | Should -BeExactly ''
             Get-Content -LiteralPath (Join-Path $TestDrive 'TS\smsts[1].log') | Should -Be 'first'
             Get-Content -LiteralPath (Join-Path $TestDrive 'TS\nested\more.log') | Should -Be 'second'
+        }
+
+        It 'records a missing nonempty path without creating a destination or emitting output' -Tag 'Cleanup' {
+            $Source = [pscustomobject]@{
+                Name = 'Missing'
+                Path = Join-Path $TestDrive 'not-present[1]'
+                Recurse = $true
+            }
+            $Manifest = New-Object System.Collections.ArrayList
+            $Output = @(Copy-LogSource -Source $Source -DestinationRoot $TestDrive -ManifestItems $Manifest)
+            $Output.Count | Should -Be 0
+            $Manifest.Count | Should -Be 1
+            $Manifest[0].Name | Should -BeExactly $Source.Name
+            $Manifest[0].Source | Should -BeExactly $Source.Path
+            $Manifest[0].Status | Should -BeExactly 'NotFound'
+            $Manifest[0].Message | Should -BeExactly ''
+            Test-Path -LiteralPath (Join-Path $TestDrive 'Missing') | Should -BeFalse
         }
 
         It 'does not copy child directories for a nonrecursive source' {
@@ -90,12 +128,17 @@ Describe 'Runtime behavior' {
             $Manifest = New-Object System.Collections.ArrayList
             Copy-LogSource -Source ([pscustomobject]@{Name = 'Absent'; Path = ''; Recurse = $true }) -DestinationRoot $TestDrive -ManifestItems $Manifest
             $Manifest[0].Status | Should -Be 'NotFound'
+            $Manifest[0].Message | Should -BeExactly 'Source path is empty.'
             $File = Join-Path $TestDrive 'denied.log'
             Set-Content $File 'content'
             Mock Copy-Item { throw 'Access denied' }
             $Output = @(Copy-LogSource -Source ([pscustomobject]@{Name = 'Denied'; Path = $File; Recurse = $false }) -DestinationRoot $TestDrive -ManifestItems $Manifest)
             $Output.Count | Should -Be 0
             $Manifest[1].Status | Should -Be 'Error'
+            $Manifest.Count | Should -Be 2
+            $Manifest[1].Name | Should -BeExactly 'Denied'
+            $Manifest[1].Source | Should -BeExactly $File
+            $Manifest[1].Message | Should -BeExactly 'Operation failed (RuntimeException); raw exception details are omitted to protect credentials.'
         }
 
         It 'writes a real ZIP containing the manifest and collected content' {
@@ -492,7 +535,7 @@ Describe 'Runtime behavior' {
             $script:AllowUnverifiedSmb = $true
             { Send-Archive @script:Upload } | Should -Throw '*AllowNtlmV2*'
             $script:AllowNtlmV2 = $true
-            Send-Archive @script:Upload | Should -Be '\\fileserver.contoso.com\OSDLogs$\Logs\logs.zip'
+            (Send-Archive @script:Upload).RemoteArchive | Should -Be '\\fileserver.contoso.com\OSDLogs$\Logs\logs.zip'
             Should -Invoke New-PSDrive -Times 1 -Exactly
             Should -Invoke Remove-PSDrive -Times 1 -Exactly
         }
@@ -555,8 +598,23 @@ Describe 'Runtime behavior' {
         It 'returns only the remote path on successful byte-size verification' {
             $Output = @(Send-Archive @script:Upload)
             $Output.Count | Should -Be 1
-            $Output[0] | Should -Be '\\fileserver.contoso.com\OSDLogs$\Logs\logs.zip'
+            $Output[0].RemoteArchive | Should -Be '\\fileserver.contoso.com\OSDLogs$\Logs\logs.zip'
+            $Output[0].CleanupSucceeded | Should -BeTrue
             Should -Invoke New-SmbMapping -Times 1 -Exactly -ParameterFilter { $RequireIntegrity -and $RequirePrivacy }
+        }
+        It 'reports PSDrive cleanup failure after a verified copy without copying again' -Tag Regression {
+            $script:MappingCommand = $null
+            $script:AllowUnverifiedSmb = $true
+            $script:AllowNtlmV2 = $true
+            Mock Remove-PSDrive { throw 'Cleanup denied' }
+
+            $Result = Send-Archive @script:Upload
+
+            $Result.RemoteArchive | Should -Be '\\fileserver.contoso.com\OSDLogs$\Logs\logs.zip'
+            $Result.CleanupSucceeded | Should -BeFalse
+            $Result.CleanupFailures | Should -Contain 'PSDrive'
+            Should -Invoke Copy-Item -Times 1 -Exactly
+            Should -Invoke Remove-PSDrive -Times 1 -Exactly
         }
     }
 
@@ -587,7 +645,13 @@ Describe 'Runtime behavior' {
                     ProgramDataRoot=$script:ProgramDataRoot; SystemDriveRoot=$script:SystemDriveRoot
                 } }
             Mock Start-Sleep {}
-            Mock Send-Archive { '\\fileserver.contoso.com\OSDLogs$\Logs\logs.zip' }
+            Mock Send-Archive {
+                [pscustomobject]@{
+                    RemoteArchive = '\\fileserver.contoso.com\OSDLogs$\Logs\logs.zip'
+                    CleanupSucceeded = $true
+                    CleanupFailures = @()
+                }
+            }
             [void](New-Item -Path (Join-Path $script:WindowsRoot 'CCM\Logs') -ItemType Directory -Force)
             Set-Content -LiteralPath (Join-Path $script:WindowsRoot 'CCM\Logs\client.log') -Value 'client log'
         }
@@ -631,7 +695,11 @@ Describe 'Runtime behavior' {
             Mock Send-Archive {
                 $script:ObservedCredential = $Credential
                 $script:ObservedScriptCredential = [object]::ReferenceEquals($Credential, $script:Credential)
-                '\\fileserver.contoso.com\OSDLogs$\Logs\logs.zip'
+                [pscustomobject]@{
+                    RemoteArchive = '\\fileserver.contoso.com\OSDLogs$\Logs\logs.zip'
+                    CleanupSucceeded = $true
+                    CleanupFailures = @()
+                }
             }
 
             $Shadow = New-Object System.Management.Automation.PSCredential (
@@ -709,6 +777,24 @@ Describe 'Runtime behavior' {
             $script:ObservedExitCode | Should -Be 1
             @(Get-ChildItem -LiteralPath $script:Pending -Filter *.zip).Count | Should -Be 1
         }
+        It 'does not re-upload after a verified copy reports SMB cleanup failure' -Tag Regression {
+            Mock Send-Archive {
+                [pscustomobject]@{
+                    RemoteArchive = '\\fileserver.contoso.com\OSDLogs$\Logs\logs.zip'
+                    CleanupSucceeded = $false
+                    CleanupFailures = @('PSDrive')
+                }
+            }
+
+            & $script:MainBody
+
+            $script:ObservedExitCode | Should -Be 1
+            Should -Invoke Send-Archive -Times 1 -Exactly
+            Should -Invoke Start-Sleep -Times 0 -Exactly
+            @(Get-ChildItem -LiteralPath $script:Pending -Filter *.zip).Count | Should -Be 1
+            (Get-Content -LiteralPath $script:LogPath -Raw) | Should -Match 'Upload was verified, but SMB connection cleanup failed: PSDrive'
+            (Get-Content -LiteralPath $script:LogPath -Raw) | Should -Not -Match 'Upload attempt 1 failed'
+        }
         It 'succeeds after a transient failure without exhausting the retry limit' {
             $script:UploadCalls = 0
             Mock Send-Archive {
@@ -716,7 +802,11 @@ Describe 'Runtime behavior' {
                 if ($script:UploadCalls -eq 1) {
                     throw 'Transient failure'
                 }
-                '\\fileserver.contoso.com\OSDLogs$\Logs\logs.zip'
+                [pscustomobject]@{
+                    RemoteArchive = '\\fileserver.contoso.com\OSDLogs$\Logs\logs.zip'
+                    CleanupSucceeded = $true
+                    CleanupFailures = @()
+                }
             }
             & $script:MainBody
             $script:ObservedExitCode | Should -Be 0
