@@ -67,4 +67,4 @@ For changes, see [contributing](CONTRIBUTING.md) and the
 ## Related projects
 
 - [Add Computer to AD Group](https://github.com/vartaxe/ConfigMgr-OSD-AddComputerToADGroup) - companion task-sequence utility ([documentation](https://vartaxe.github.io/ConfigMgr-OSD-AddComputerToADGroup/)).
-- [Claudio Mendes / vartaxe](https://vartaxe.github.io/vartaxe/) - profile and project directory ([GitHub](https://github.com/vartaxe)).
+- [vartaxe Windows endpoint automation](https://vartaxe.github.io/) - canonical project hub and maintainer profile ([GitHub](https://github.com/vartaxe)).
