@@ -93,7 +93,7 @@ GitHub Pages publishes `main` from the repository root using Cayman and the shar
 The examples index has an explicit `/examples/` permalink so README-index behavior cannot change its destination. Script and extensionless `LICENSE` links remain static resources; `Tests` and `build` are excluded from the site, not the source repository or release archives.
 
 The Pages deployment-guide button uses `/docs/deployment.html` through `relative_url`, preserving the project base path. Keep `.md` links in Markdown, not HTML/Liquid navigation. Each guide has a relative link back to the documentation home so GitHub and Pages both remain navigable.
-The shared layout, CSS, and favicon match the [profile site](https://vartaxe.github.io/vartaxe/) and companion AD-group project. Coordinate shared-template changes across all three repositories.
+The shared layout, CSS, and favicon match the [canonical hub](https://vartaxe.github.io/) and companion AD-group project. Coordinate shared-template changes across all three repositories.
 
 After changing site content, check the GitHub Pages build and rendered light/dark desktop/mobile pages, including keyboard focus and the skip link.
 Generated `_site`, `.jekyll-cache`, `.jekyll-metadata`, `.sass-cache`, `.bundle`, and `vendor/bundle` paths are ignored by Git, but the strict checksum validator still sees files in the source tree. Keep local build output and caches outside the tree, or remove only known generated artifacts before checksum regeneration and final validation.
