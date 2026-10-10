@@ -4,7 +4,6 @@ permissions:
   contents: read
 jobs:
   validate:
-    name: CI validation
     runs-on: windows-2022
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -26,17 +25,3 @@ jobs:
               $ValidationParameters.Tag = $env:GITHUB_REF.Substring('refs/tags/'.Length)
           }
           .\build\Invoke-Validation.ps1 @ValidationParameters
-  powershell-validation:
-    name: PowerShell validation
-    needs: validate
-    if: always()
-    runs-on: ubuntu-latest
-    steps:
-      - name: Report canonical validation result
-        env:
-          VALIDATION_RESULT: ${{ needs.validate.result }}
-        run: |
-          if [ "$VALIDATION_RESULT" != "success" ]; then
-            echo "::error::CI validation did not succeed ($VALIDATION_RESULT)."
-            exit 1
-          fi
