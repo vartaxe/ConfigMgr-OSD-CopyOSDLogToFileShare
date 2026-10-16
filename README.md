@@ -9,6 +9,8 @@
 
 Collect deployment diagnostics into a named ZIP, upload it to an authenticated SMB share, and retain the local copy if delivery fails. The archive includes a source manifest; the dedicated CMTrace log records collection and upload results.
 
+**Claudio Mendes · Windows endpoint automation · [@vartaxe](https://github.com/vartaxe)**
+
 **Current version: 1.0.0.** This README follows `main`; downloads are versioned snapshots.
 
 [Documentation](https://vartaxe.github.io/ConfigMgr-OSD-CopyOSDLogToFileShare/) | [Quick start](#quick-start) | [Deployment](docs/deployment.md) | [Compatibility](docs/compatibility.md) | [Security](SECURITY.md) | [Troubleshooting](docs/troubleshooting.md)
