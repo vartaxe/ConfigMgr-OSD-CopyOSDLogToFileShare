@@ -1,0 +1,82 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="340" viewBox="0 0 1400 340" role="img" aria-labelledby="title desc">
+    <title id="title">Copy OSD Logs to File Share workflow</title>
+    <desc id="desc">Set custom log variables, collect the standard log profile, write Manifest.json, create a local ZIP, check TCP 445, upload and verify remote byte size, then clear credentials with native Task Sequence steps. Cleanup must also run on failure. Extended logs are opt-in.</desc>
+    <style>
+        svg { color-scheme: light dark; font-family: "Segoe UI", Arial, sans-serif; --surface: #f4f8fa; --card: #ffffff; --text: #243746; --muted: #526574; --accent: #117865; --on-accent: #ffffff; --border: #cbd9e1; }
+        .canvas { fill: var(--surface); }
+        .card { fill: var(--card); stroke: var(--border); stroke-width: 2; }
+        text { fill: var(--text); }
+        .muted { fill: var(--muted); }
+        .badge, .arrowhead { fill: var(--accent); }
+        .number { fill: var(--on-accent); font-size: 22px; font-weight: 700; text-anchor: middle; }
+        .label { font-size: 22px; font-weight: 600; text-anchor: middle; }
+        .arrow { fill: none; stroke: var(--accent); stroke-width: 3; marker-end: url(#arrow); }
+        @media (prefers-color-scheme: dark) {
+            svg { --surface: #0d1520; --card: #152333; --text: #e5edf3; --muted: #b0c3d1; --accent: #70dec5; --on-accent: #103d38; --border: #385064; }
+        }
+    </style>
+    <defs>
+        <marker id="arrow" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="6" markerHeight="6" orient="auto">
+            <path class="arrowhead" d="M0 0l8 4-8 4z"/>
+        </marker>
+    </defs>
+    <rect class="canvas" width="1400" height="340" rx="24"/>
+    <text x="40" y="54" font-size="32" font-weight="700">Copy OSD Logs to File Share workflow</text>
+    <g>
+        <rect class="card" x="40" y="94" width="168" height="140" rx="16"/>
+        <circle class="badge" cx="124" cy="124" r="19"/>
+        <text class="number" x="124" y="132">1</text>
+        <text class="label" x="124" y="178">Set log</text>
+        <text class="label" x="124" y="208">variables</text>
+    </g>
+    <path class="arrow" d="M212 164h16"/>
+    <g>
+        <rect class="card" x="232" y="94" width="168" height="140" rx="16"/>
+        <circle class="badge" cx="316" cy="124" r="19"/>
+        <text class="number" x="316" y="132">2</text>
+        <text class="label" x="316" y="178">Collect</text>
+        <text class="label" x="316" y="208">standard logs</text>
+    </g>
+    <path class="arrow" d="M404 164h16"/>
+    <g>
+        <rect class="card" x="424" y="94" width="168" height="140" rx="16"/>
+        <circle class="badge" cx="508" cy="124" r="19"/>
+        <text class="number" x="508" y="132">3</text>
+        <text class="label" x="508" y="178">Write</text>
+        <text class="label" x="508" y="208">Manifest.json</text>
+    </g>
+    <path class="arrow" d="M596 164h16"/>
+    <g>
+        <rect class="card" x="616" y="94" width="168" height="140" rx="16"/>
+        <circle class="badge" cx="700" cy="124" r="19"/>
+        <text class="number" x="700" y="132">4</text>
+        <text class="label" x="700" y="178">Create</text>
+        <text class="label" x="700" y="208">local ZIP</text>
+    </g>
+    <path class="arrow" d="M788 164h16"/>
+    <g>
+        <rect class="card" x="808" y="94" width="168" height="140" rx="16"/>
+        <circle class="badge" cx="892" cy="124" r="19"/>
+        <text class="number" x="892" y="132">5</text>
+        <text class="label" x="892" y="178">TCP 445</text>
+        <text class="label" x="892" y="208">preflight</text>
+    </g>
+    <path class="arrow" d="M980 164h16"/>
+    <g>
+        <rect class="card" x="1000" y="94" width="168" height="140" rx="16"/>
+        <circle class="badge" cx="1084" cy="124" r="19"/>
+        <text class="number" x="1084" y="132">6</text>
+        <text class="label" x="1084" y="178">Upload</text>
+        <text class="label" x="1084" y="208">and verify</text>
+    </g>
+    <path class="arrow" d="M1172 164h16"/>
+    <g>
+        <rect class="card" x="1192" y="94" width="168" height="140" rx="16"/>
+        <circle class="badge" cx="1276" cy="124" r="19"/>
+        <text class="number" x="1276" y="132">7</text>
+        <text class="label" x="1276" y="178">Clear</text>
+        <text class="label" x="1276" y="208">variables</text>
+    </g>
+    <text x="40" y="282" font-size="24">Native Task Sequence steps clear credentials on success and failure.</text>
+    <text class="muted" x="40" y="316" font-size="22">Standard profile shown; extended logs are opt-in.</text>
+</svg>

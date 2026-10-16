@@ -1,0 +1,31 @@
+name: Compatibility report
+description: Report an environment-specific compatibility result
+title: "[Compatibility]: "
+labels:
+  - compatibility
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Do not include credentials, internal names, certificates, or raw logs. Use [private vulnerability reporting](https://github.com/vartaxe/ConfigMgr-OSD-CopyOSDLogToFileShare/security/advisories/new) for security issues. If unavailable, contact [vartaxe@outlook.com](mailto:vartaxe@outlook.com) to arrange a private exchange.
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: Script version, ConfigMgr version, Windows version, Windows PowerShell version, and whether the script ran in WinPE or full Windows.
+    validations:
+      required: true
+  - type: textarea
+    id: smb
+    attributes:
+      label: SMB configuration
+      description: Describe the observed SMB dialect, encryption/integrity properties, and any explicit compatibility parameters used. Do not include credentials or internal server names.
+    validations:
+      required: true
+  - type: textarea
+    id: result
+    attributes:
+      label: Result
+      description: Distinguish static checks, mocked unit tests, GitHub Actions, and actual live testing. Include steps, expected/actual behavior, process exit code, and sanitized excerpts from CopyOSDLogs.log and smsts.log.
+    validations:
+      required: true
