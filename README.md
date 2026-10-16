@@ -11,6 +11,11 @@ Collect deployment diagnostics into a named ZIP, upload it to an authenticated S
 
 **Current version: 1.0.0.** This README follows `main`; downloads are versioned snapshots.
 
+> **Unreleased changes:** `main` contains script changes made after v1.0.0. The
+> release ZIP and public gist remain v1.0.0 snapshots and do not include them.
+> [Compare v1.0.0 with main](https://github.com/vartaxe/ConfigMgr-OSD-CopyOSDLogToFileShare/compare/v1.0.0...main)
+> before choosing a deployment source; validate the exact revision before rollout.
+
 [Documentation](https://vartaxe.github.io/ConfigMgr-OSD-CopyOSDLogToFileShare/) | [Quick start](#quick-start) | [Deployment](docs/deployment.md) | [Compatibility](docs/compatibility.md) | [Security](SECURITY.md) | [Troubleshooting](docs/troubleshooting.md)
 
 [![Release v1.0.0](https://img.shields.io/badge/RELEASE-v1.0.0-155799)](https://github.com/vartaxe/ConfigMgr-OSD-CopyOSDLogToFileShare/releases/tag/v1.0.0)
