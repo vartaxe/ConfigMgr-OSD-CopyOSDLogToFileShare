@@ -245,9 +245,10 @@ def workspace_glob_matches(directory: str, pattern: str) -> bool:
     return bool(path_parts and pattern_parts) and match(0, 0)
 
 
-def npm_workspaces(repo: Path, npm: dict[str, set[str]],
-                   cwd: Path = Path(".")) -> list[set[str]] | None:
-    """Resolve workspaces from the nearest package root containing the invocation cwd."""
+def npm_workspace_directories(
+        repo: Path, npm: dict[str, set[str]], cwd: Path
+        ) -> list[str] | None:
+    """Resolve workspace package directories from the nearest applicable root."""
     invocation_dir = (repo / cwd).resolve()
     repo_root = repo.resolve()
     for root in (invocation_dir, *invocation_dir.parents):
@@ -290,10 +291,17 @@ def npm_workspaces(repo: Path, npm: dict[str, set[str]],
                 for directory in selected):
             continue
         return [
-            npm[root_rel + "/" + directory if root_rel else directory]
+            root_rel + "/" + directory if root_rel else directory
             for directory in selected
         ]
     return None
+
+
+def npm_workspaces(repo: Path, npm: dict[str, set[str]],
+                   cwd: Path = Path(".")) -> list[set[str]] | None:
+    """Resolve workspaces from the nearest package root containing the invocation cwd."""
+    directories = npm_workspace_directories(repo, npm, cwd)
+    return [npm[directory] for directory in directories] if directories else None
 
 
 def fenced_blocks(text: str) -> list[tuple[int, str]]:
@@ -436,18 +444,28 @@ def npm_package_scripts(npm: dict[str, set[str]], cwd: Path) -> set[str]:
 
 def npm_workspace_package_scripts(
         repo: Path, npm: dict[str, set[str]], workspace_names: dict[str, set[str]],
-        selector: str) -> set[str] | None:
+        selector: str, cwd: Path = Path(".")) -> set[str] | None:
     """Resolve a workspace selector by package directory or package name."""
-    target = Path(selector.replace("\\", "/"))
-    candidate = target if target.is_absolute() else repo / target
-    try:
-        directory = candidate.resolve().relative_to(repo.resolve()).as_posix()
-    except ValueError:
-        return None
-    if directory in npm:
-        return npm[directory]
+    workspace_directories = npm_workspace_directories(repo, npm, cwd)
+    if workspace_directories is None:
+        applicable = [
+            Path(directory) for directory in npm
+            if cwd == Path(directory) or Path(directory) in cwd.parents
+        ]
+        root = max(applicable, key=lambda directory: len(directory.parts)) \
+            if applicable else Path(".")
+        root_rel = root.as_posix()
+        workspace_directories = [
+            directory for directory in npm
+            if directory == root_rel
+            or root_rel == "." or directory.startswith(root_rel + "/")
+        ]
 
-    matches = workspace_names.get(selector, set())
+    directory = directory_from(repo, cwd, selector)
+    if directory is not None and directory.as_posix() in workspace_directories:
+        return npm.get(directory.as_posix())
+
+    matches = workspace_names.get(selector, set()) & set(workspace_directories)
     if len(matches) == 1:
         return npm.get(next(iter(matches)))
     return None
@@ -800,7 +818,7 @@ def npm_commands_in_line(repo: Path, npm: dict[str, set[str]], line: str,
                 resolved = True
                 for selector in workspace_selectors:
                     scripts = npm_workspace_package_scripts(
-                        repo, npm, workspace_names or {}, selector)
+                        repo, npm, workspace_names or {}, selector, command_cwd)
                     if scripts is None:
                         resolved = False
                         break

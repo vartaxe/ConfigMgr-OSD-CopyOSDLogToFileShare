@@ -1472,6 +1472,46 @@ npm run build
                 "missing-script",
                 {finding["kind"] for finding in result["findings"]})
 
+    def test_npm_workspace_selectors_are_scoped_to_prefix_workspace_root(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            repo = Path(temp_dir)
+            root_workspace = repo / "packages" / "app"
+            nested_root = repo / "products" / "app"
+            nested_workspace = nested_root / "packages" / "app"
+            root_workspace.mkdir(parents=True)
+            nested_workspace.mkdir(parents=True)
+            (repo / "package.json").write_text(
+                '{"workspaces": ["packages/*", "products/*/packages/*"]}\n',
+                encoding="utf-8")
+            (root_workspace / "package.json").write_text(
+                '{"name": "@acme/app", "scripts": {"root-only": "root"}}\n',
+                encoding="utf-8")
+            (nested_root / "package.json").write_text(
+                '{"workspaces": ["packages/*"]}\n', encoding="utf-8")
+            (nested_workspace / "package.json").write_text(
+                '{"name": "@acme/app", "scripts": {"nested-only": "nested"}}\n',
+                encoding="utf-8")
+            (repo / "README.md").write_text(
+                "```sh\n"
+                "npm --prefix products/app --workspace packages/app run nested-only\n"
+                "npm --prefix products/app --workspace @acme/app run nested-only\n"
+                "npm --prefix products/app --workspace @acme/app run root-only\n"
+                "```\n",
+                encoding="utf-8")
+
+            result = DOCS_DRIFT.build(repo, [
+                "package.json", "packages/app/package.json",
+                "products/app/package.json",
+                "products/app/packages/app/package.json", "README.md",
+            ])
+
+            missing_scripts = [
+                finding for finding in result["findings"]
+                if finding["kind"] == "missing-script"
+            ]
+            self.assertEqual(len(missing_scripts), 1)
+            self.assertIn("root-only", missing_scripts[0]["detail"])
+
     def test_npm_workspace_name_wins_over_another_package_basename(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             repo = Path(temp_dir)
