@@ -87,6 +87,11 @@ Describe 'Repository contract' {
         $script:ProductionScript | Should -Not -Match 'cmdkey|net\s+use|Win32_Product|Get-WmiObject|\bwmic(?:\.exe)?\b'
     }
 
+    It 'uses fastest ZIP compression to minimize task-sequence runtime' {
+        $script:ProductionScript | Should -Match '\[System\.IO\.Compression\.CompressionLevel\]::Fastest'
+        $script:ProductionScript | Should -Not -Match '\[System\.IO\.Compression\.CompressionLevel\]::Optimal'
+    }
+
     It 'binds the script-scoped credential in the orchestration and leaves no unqualified Credential reference' {
         $Statements = $script:Ast.EndBlock.Statements
         $Start = ($Statements | Where-Object { $_.Extent.Text -eq '$ExitCode = 1' } | Select-Object -First 1).Extent.StartOffset
