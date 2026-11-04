@@ -75,6 +75,7 @@ NPM_OPTIONS_WITH_VALUE = NPM_PACKAGE_OPTIONS | {
     "--scope", "--script-shell", "--userconfig", "--workspace", "-w",
 }
 MAKE_TARGET = re.compile(r"[A-Za-z0-9][A-Za-z0-9_.-]*\Z")
+DEFAULT_MAKEFILES = ("GNUmakefile", "makefile", "Makefile")
 CMD_SCRIPT = re.compile(
     r"(?:^|\s)(\./[A-Za-z0-9_./-]+|"
     r"(?:python3?|node|bash|sh|ruby|pwsh|powershell)\s+"
@@ -183,11 +184,22 @@ def read(path: Path) -> str:
         return ""
 
 
+def default_makefile(files: set[str], directory: str) -> str | None:
+    """Return GNU Make's first default makefile in a directory, if inventoried."""
+    for name in DEFAULT_MAKEFILES:
+        rel = (Path(directory) / name).as_posix()
+        if rel in files:
+            return rel
+    return None
+
+
 def available_commands(
         repo: Path, files: list[str]) -> tuple[dict[str, set[str]], dict[str, set[str]]]:
     """Real npm scripts and make targets, keyed by the directory that declares them."""
     npm: dict[str, set[str]] = {}
     make: dict[str, set[str]] = {}
+    file_set = set(files)
+    make_directories = set()
     for rel in files:
         base = Path(rel).name
         prefix = str(Path(rel).parent).replace("\\", "/")
@@ -199,8 +211,12 @@ def available_commands(
             npm.setdefault(prefix, set())
             if isinstance(data.get("scripts"), dict):
                 npm[prefix].update(data["scripts"].keys())
-        elif base == "Makefile":
-            make[prefix] = makefile_targets(repo, rel)
+        elif base in DEFAULT_MAKEFILES:
+            make_directories.add(prefix)
+    for directory in make_directories:
+        rel = default_makefile(file_set, directory)
+        if rel is not None:
+            make[directory] = makefile_targets(repo, rel)
     return npm, make
 
 
@@ -625,7 +641,10 @@ def shell_executable_index(tokens: list[str]) -> int | None:
                 if token == "--":
                     index += 1
                     break
-                if token in {"-u", "-g", "-h", "-p", "-C", "-D", "-R", "-T"}:
+                if (token in {"-D", "-R", "--chdir", "--chroot"}
+                        or token.startswith(("-D", "-R", "--chdir=", "--chroot="))):
+                    return None
+                if token in {"-u", "-g", "-h", "-p", "-C", "-T"}:
                     index += 2
                     continue
                 if token.startswith("-"):
@@ -1050,8 +1069,11 @@ def make_commands_in_line(
                     inventory_complete = all(resolved_completeness)
             else:
                 inventory = make.get(make_cwd.as_posix())
-                inventory_complete = makefile_inventory_complete(
-                    repo, (make_cwd / "Makefile").as_posix())
+                selected_makefile = default_makefile(
+                    files if files is not None else set(), make_cwd.as_posix())
+                if selected_makefile is not None:
+                    inventory_complete = makefile_inventory_complete(
+                        repo, selected_makefile)
             if inventory is not None:
                 for target in targets:
                     applicable_targets = inventory
@@ -1296,14 +1318,53 @@ def markdown_image_links(
                 target = references.get(markdown_reference_label(reference_label))
                 if target:
                     links.append((line_number, target))
+        else:
+            target = references.get(markdown_reference_label(label))
+            if target:
+                links.append((line_number, target))
         if "!" in label and "[" in label:
             links.extend(markdown_image_links(label, line_number, references))
         index = next_index
     return links
 
 
+def markdown_lines_without_html_comments(
+        lines: list[tuple[int, str]]) -> list[tuple[int, str]]:
+    """Mask HTML comments while preserving line numbers and Markdown contexts."""
+    masked_lines = []
+    in_comment = False
+    for line_number, line in lines:
+        masked = list(line)
+        index = 0
+        while index < len(line):
+            if in_comment:
+                closing = line.find("-->", index)
+                if closing < 0:
+                    masked[index:] = [" "] * (len(line) - index)
+                    break
+                end = closing + 3
+                masked[index:end] = [" "] * (end - index)
+                index = end
+                in_comment = False
+            else:
+                start = line.find("<!--", index)
+                if start < 0:
+                    break
+                closing = line.find("-->", start + 4)
+                if closing < 0:
+                    masked[start:] = [" "] * (len(line) - start)
+                    in_comment = True
+                    break
+                end = closing + 3
+                masked[start:end] = [" "] * (end - start)
+                index = end
+        masked_lines.append((line_number, "".join(masked)))
+    return masked_lines
+
+
 def markdown_links(lines: list[tuple[int, str]]) -> list[tuple[int, str]]:
     """Extract inline and reference-style Markdown links from code-free lines."""
+    lines = markdown_lines_without_html_comments(lines)
     references: dict[str, str] = {}
     definition_lines = set()
     for line_number, line in lines:

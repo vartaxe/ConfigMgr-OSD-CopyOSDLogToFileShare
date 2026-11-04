@@ -362,9 +362,14 @@ Rules:
 - If a commit message revealed intent that the code diff alone wouldn't convey
   (e.g. a security fix disguised as a one-line change), include that context in
   the changelog entry.
-- Also update the diff link at the bottom of the file:
+- Also update the link at the bottom of the file, using the exact tag names
+  selected for this release. For releases with a previous tag:
   ```markdown
-  [X.Y.Z]: https://github.com/OWNER/REPO/compare/vPREV...vNEXT
+  [X.Y.Z]: https://github.com/OWNER/REPO/compare/PREV_TAG...NEXT_TAG
+  ```
+  For a first release with no previous tag, link directly to the new tag's tree:
+  ```markdown
+  [X.Y.Z]: https://github.com/OWNER/REPO/tree/NEXT_TAG
   ```
 
 **Show the user the proposed changelog section before writing it to disk.**

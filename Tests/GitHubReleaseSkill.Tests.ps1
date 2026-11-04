@@ -9,6 +9,12 @@ BeforeAll {
 }
 
 Describe 'GitHub release tag selection' {
+    It 'uses the exact tag names in changelog links and supports a first release' {
+        $script:SkillContent | Should -Match '\[X\.Y\.Z\]: https://github\.com/OWNER/REPO/compare/PREV_TAG\.\.\.NEXT_TAG'
+        $script:SkillContent | Should -Match '\[X\.Y\.Z\]: https://github\.com/OWNER/REPO/tree/NEXT_TAG'
+        $script:SkillContent | Should -Not -Match '/compare/vPREV\.\.\.vNEXT'
+    }
+
     It 'checks the exact fully qualified remote tag ref' {
         $script:SkillContent | Should -Match 'git ls-remote --exit-code --refs origin "refs/tags/\$PREV_TAG"'
         $script:SkillContent | Should -Not -Match 'git ls-remote --tags origin \| grep "refs/tags/\$PREV_TAG\$"'

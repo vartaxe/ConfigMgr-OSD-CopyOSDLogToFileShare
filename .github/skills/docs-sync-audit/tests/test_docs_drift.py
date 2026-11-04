@@ -350,6 +350,68 @@ continues inside this code span`
             self.assertEqual(len(broken), 1)
             self.assertIn("missing(v2).md", broken[0]["detail"])
 
+    def test_nested_shortcut_image_resolves_reference_destination(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            repo = Path(temp_dir)
+            (repo / "guide.md").write_text("# Guide\n", encoding="utf-8")
+            (repo / "README.md").write_text(
+                "[![Preview]](guide.md)\n"
+                "[Preview]: missing.png\n",
+                encoding="utf-8")
+
+            result = DOCS_DRIFT.build(repo, ["README.md", "guide.md"])
+
+            broken = [
+                finding for finding in result["findings"]
+                if finding["kind"] == "broken-link"
+            ]
+            self.assertEqual(len(broken), 1)
+            self.assertIn("missing.png", broken[0]["detail"])
+
+    def test_markdown_links_ignore_inline_and_multiline_html_comments(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            repo = Path(temp_dir)
+            (repo / "README.md").write_text(
+                "<!-- [Deferred](missing-inline.md) --> "
+                "[Visible](missing-visible.md)\n"
+                "<!--\n"
+                "[Masked link][masked]\n"
+                "[masked]: missing-reference.md\n"
+                "-->\n"
+                "[Deferred][masked]\n"
+                "[Real broken link](missing-real.md)\n",
+                encoding="utf-8")
+
+            result = DOCS_DRIFT.build(repo, ["README.md"])
+
+            broken = [
+                finding for finding in result["findings"]
+                if finding["kind"] == "broken-link"
+            ]
+            self.assertEqual([finding["line"] for finding in broken], [1, 7])
+            self.assertIn("missing-visible.md", broken[0]["detail"])
+            self.assertIn("missing-real.md", broken[1]["detail"])
+
+    def test_html_comment_markers_in_fenced_code_do_not_mask_markdown(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            repo = Path(temp_dir)
+            (repo / "README.md").write_text(
+                "```md\n"
+                "<!-- not a comment for Markdown link scanning\n"
+                "```\n"
+                "`<!--` [Visible](missing-visible.md)\n",
+                encoding="utf-8")
+
+            result = DOCS_DRIFT.build(repo, ["README.md"])
+
+            broken = [
+                finding for finding in result["findings"]
+                if finding["kind"] == "broken-link"
+            ]
+            self.assertEqual(len(broken), 1)
+            self.assertEqual(broken[0]["line"], 4)
+            self.assertIn("missing-visible.md", broken[0]["detail"])
+
     def test_unparseable_markdown_link_is_skipped(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             repo = Path(temp_dir)
@@ -1082,6 +1144,53 @@ continues inside this code span`
             self.assertEqual(len(missing_targets), 1)
             self.assertIn("unknown", missing_targets[0]["detail"])
 
+    def test_make_uses_gnumakefile_before_makefile_and_makefile(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            repo = Path(temp_dir)
+            (repo / "GNUmakefile").write_text("gnu-target:\n", encoding="utf-8")
+            (repo / "makefile").write_text("lowercase-target:\n", encoding="utf-8")
+            (repo / "Makefile").write_text("capitalized-target:\n", encoding="utf-8")
+            doc = repo / "README.md"
+            doc.write_text(
+                "```sh\n"
+                "make gnu-target\n"
+                "make lowercase-target\n"
+                "make capitalized-target\n"
+                "```\n", encoding="utf-8")
+
+            result = DOCS_DRIFT.build(repo, [
+                "GNUmakefile", "makefile", "Makefile", "README.md",
+            ])
+
+            missing_targets = [
+                finding["detail"] for finding in result["findings"]
+                if finding["kind"] == "missing-make-target"
+            ]
+            self.assertEqual(len(missing_targets), 2)
+            self.assertTrue(any("lowercase-target" in item for item in missing_targets))
+            self.assertTrue(any("capitalized-target" in item for item in missing_targets))
+
+    def test_make_uses_lowercase_makefile_before_capitalized_makefile(self):
+        self.assertEqual(
+            DOCS_DRIFT.default_makefile({"makefile", "Makefile"}, "."),
+            "makefile")
+
+    def test_make_inventory_completeness_uses_selected_default_makefile(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            repo = Path(temp_dir)
+            (repo / "GNUmakefile").write_text(
+                "include generated-targets.mk\n", encoding="utf-8")
+            (repo / "Makefile").write_text("# complete but not selected\n", encoding="utf-8")
+            doc = repo / "README.md"
+            doc.write_text("```sh\nmake generated-target\n```\n", encoding="utf-8")
+
+            result = DOCS_DRIFT.build(
+                repo, ["GNUmakefile", "Makefile", "README.md"])
+
+            self.assertNotIn(
+                "missing-make-target",
+                {finding["kind"] for finding in result["findings"]})
+
     def test_make_target_declared_only_in_nested_makefile_is_missing_at_root(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             repo = Path(temp_dir)
@@ -1365,6 +1474,43 @@ continues inside this code span`
 
             self.assertNotIn(
                 "missing-script", {finding["kind"] for finding in result["findings"]})
+
+    def test_sudo_directory_options_skip_commands_without_effective_cwd(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            repo = Path(temp_dir)
+            nested = repo / "packages" / "web"
+            scripts = nested / "scripts"
+            scripts.mkdir(parents=True)
+            (repo / "package.json").write_text(
+                '{"scripts": {}}\n', encoding="utf-8")
+            (nested / "package.json").write_text(
+                '{"scripts": {"build": "build"}}\n', encoding="utf-8")
+            (repo / "Makefile").write_text("root-only:\n", encoding="utf-8")
+            (nested / "Makefile").write_text("web-build:\n", encoding="utf-8")
+            (scripts / "build.sh").write_text("echo build\n", encoding="utf-8")
+            (repo / "README.md").write_text(
+                "```sh\n"
+                "sudo -D packages/web npm run build\n"
+                "sudo -R packages/web make web-build\n"
+                "sudo -Dpackages/web ./scripts/build.sh\n"
+                "sudo -Rpackages/web ./scripts/build.sh\n"
+                "```\n", encoding="utf-8")
+
+            result = DOCS_DRIFT.build(repo, [
+                "package.json", "packages/web/package.json", "Makefile",
+                "packages/web/Makefile", "packages/web/scripts/build.sh",
+                "README.md",
+            ])
+
+            self.assertNotIn(
+                "missing-script",
+                {finding["kind"] for finding in result["findings"]})
+            self.assertNotIn(
+                "missing-make-target",
+                {finding["kind"] for finding in result["findings"]})
+            self.assertNotIn(
+                "missing-script-file",
+                {finding["kind"] for finding in result["findings"]})
 
     def test_npm_workspaces_resolve_from_effective_prefix_directory(self):
         with tempfile.TemporaryDirectory() as temp_dir:
