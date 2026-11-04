@@ -632,6 +632,33 @@ continues inside this code span`
                 "missing-make-target",
                 {finding["kind"] for finding in result["findings"]})
 
+    def test_make_variable_target_marks_inventory_incomplete(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            repo = Path(temp_dir)
+            (repo / "Makefile").write_text(
+                "TARGET = build\n$(TARGET):\n\t@echo build\n", encoding="utf-8")
+            (repo / "README.md").write_text(
+                "```sh\nmake build\n```\n", encoding="utf-8")
+
+            result = DOCS_DRIFT.build(repo, ["Makefile", "README.md"])
+
+            self.assertNotIn(
+                "missing-make-target",
+                {finding["kind"] for finding in result["findings"]})
+            self.assertEqual(DOCS_DRIFT.makefile_targets(repo, "Makefile"), set())
+            self.assertFalse(
+                DOCS_DRIFT.makefile_inventory_complete(repo, "Makefile"))
+
+            (repo / "Makefile").write_text(
+                "$(UNRESOLVED):\n\t@echo target\n", encoding="utf-8")
+            result = DOCS_DRIFT.build(repo, ["Makefile", "README.md"])
+
+            self.assertNotIn(
+                "missing-make-target",
+                {finding["kind"] for finding in result["findings"]})
+            self.assertFalse(
+                DOCS_DRIFT.makefile_inventory_complete(repo, "Makefile"))
+
     def test_dynamic_cd_skips_npm_and_make_until_known_directory(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             repo = Path(temp_dir)
@@ -1253,6 +1280,25 @@ continues inside this code span`
             ]
             self.assertEqual(len(broken), 1)
             self.assertIn("missing.png", broken[0]["detail"])
+
+    def test_inline_link_titles_are_skipped_after_nested_images_are_extracted(self):
+        markdown = (
+            '[![Preview](preview.png "Image title [example](missing.md)")](page.md)\n'
+            '[![Reference][image]][page]\n'
+            '[image]: reference.png\n'
+            '[page]: linked.md\n')
+
+        links = DOCS_DRIFT.markdown_links(
+            DOCS_DRIFT.markdown_lines_without_code(markdown))
+
+        self.assertEqual(
+            links,
+            [
+                (1, "preview.png"),
+                (1, "page.md"),
+                (2, "reference.png"),
+                (2, "linked.md"),
+            ])
 
     def test_env_chdir_wrapper_is_conservatively_skipped(self):
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -1878,6 +1924,20 @@ npm run build
                         repo, npm, command, Path("."))
                     self.assertEqual(len(calls), 1)
                     self.assertEqual(calls[0], (expected_script, [expected_scripts], False))
+
+    def test_npm_run_option_before_script_is_not_treated_as_script(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            repo = Path(temp_dir)
+            (repo / "package.json").write_text(
+                '{"scripts": {"build": "build"}}\n', encoding="utf-8")
+            (repo / "README.md").write_text(
+                "```sh\nnpm run --silent build\n```\n", encoding="utf-8")
+
+            result = DOCS_DRIFT.build(repo, ["package.json", "README.md"])
+
+            self.assertNotIn(
+                "missing-script",
+                {finding["kind"] for finding in result["findings"]})
 
     def test_tilde_fenced_commands_are_checked(self):
         with tempfile.TemporaryDirectory() as temp_dir:

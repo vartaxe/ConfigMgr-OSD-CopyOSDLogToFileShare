@@ -74,7 +74,7 @@
 
 **Slow Network Browsing** — Desktop.ini parsing slows folder listing; check with `NET FILE | Find "desktop.ini"` on file server. Fix: delete non-essential desktop.ini files or remove READ_ONLY permission. Corrupted profile permissions: rename `C:\Users\<profile>\AppData\Local\Microsoft\Windows` from another admin account. Network shortcuts on Desktop/Start menu cause slow refresh when resource unavailable; use `explorer /e, \\Server\Share` shortcut instead.
 
-**LAN Manager Authentication** — Controls NTLM authentication levels 0-5 via `HKLM\SYSTEM\CurrentControlSet\Control\LSA\LMCompatibilityLevel`. NTLMv1 removed in Win11 24H2 and Server 2025. Default level 3 for current OS. Level 0-1: send LM+NTLM. Level 2: send NTLM only. Level 3+: send NTLMv2 only. Levels 4-5 on DC: refuse NTLMv1/LM responses. Increasing above 3 on server can lock out old clients.
+**LAN Manager Authentication** — Controls NTLM authentication levels 0-5 via `HKLM\SYSTEM\CurrentControlSet\Control\LSA\LMCompatibilityLevel`. NTLMv1 removed in Win11 24H2 and Server 2025. Default level 3 for current OS. Level 0-1: send LM+NTLM. Level 2: send NTLM only. Level 3+: send NTLMv2 only. On DCs, level 4 refuses LM authentication but still accepts NTLMv1; level 5 refuses both LM and NTLMv1. Increasing above 3 on server can lock out old clients.
 
 **Logon Types** — Event ID 4624 types: 3=Network (remote file/printer access, credentials not cached), 4=Batch (scheduled tasks, credentials hit disk), 5=Service (service accounts, credentials in LSA secrets), 7=Unlock, 8=Network cleartext (IIS basic auth), 9=New credentials (RunAs /netonly), 10=Remote Interactive (RDP, credentials in lsass), 11=Cached Interactive (offline domain logon, mscache2 format).
 

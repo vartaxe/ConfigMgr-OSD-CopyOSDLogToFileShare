@@ -65,7 +65,7 @@ if /i "%_parOneMyTool%"=="--help" (
     goto _removeBatchVariablesMyTool
 )
 if /i "%_parOneMyTool%"=="-v" (
-    echo %_scriptNameMyTool% version %_versionMyTool%
+    for %%I in ("%_scriptNameMyTool%") do echo %%~I version %_versionMyTool%
     goto _removeBatchVariablesMyTool
 )
 

@@ -404,7 +404,8 @@ def makefile_inventory_complete(repo: Path, rel: str) -> bool:
     text = read(repo / rel)
     has_pattern_rule = re.search(r"^\s*[^:\n]*%[^:\n]*:", text, re.M)
     has_inclusion = re.search(r"^\s*(?:-?include|sinclude)\s+", text, re.M)
-    return not (has_pattern_rule or has_inclusion)
+    has_variable_rule = re.search(r"^[^:\n]*\$[^:\n]*:(?!=)", text, re.M)
+    return not (has_pattern_rule or has_inclusion or has_variable_rule)
 
 
 def make_target_has_builtin_rule(repo: Path, cwd: Path, target: str,
@@ -782,9 +783,22 @@ def npm_commands_in_line(repo: Path, npm: dict[str, set[str]], line: str,
                 if option == "run":
                     run_index = i
                 break
-            if run_index is None or run_index + 1 >= len(arguments):
+            if run_index is None:
                 continue
-            script = arguments[run_index + 1]
+            script_index = run_index + 1
+            while script_index < len(arguments):
+                option = arguments[script_index]
+                if option in NPM_OPTIONS_WITH_VALUE:
+                    script_index += 2
+                elif option.startswith("--") and "=" in option:
+                    script_index += 1
+                elif option.startswith("-"):
+                    script_index += 1
+                else:
+                    break
+            if script_index >= len(arguments):
+                continue
+            script = arguments[script_index]
             if not NPM_SCRIPT.fullmatch(script):
                 continue
 
@@ -1206,10 +1220,12 @@ def markdown_image_links(
             continue
         label = text[image_start + 2:closing]
         after = closing + 1
+        next_index = after
         if after < len(text) and text[after] == "(":
             destination = markdown_link_destination(text, after + 1)
             if destination:
                 links.append((line_number, destination[0]))
+                next_index = destination[1]
         elif after < len(text) and text[after] == "[":
             reference_end = markdown_bracket_end(text, after)
             if reference_end is not None:
@@ -1219,7 +1235,7 @@ def markdown_image_links(
                     links.append((line_number, target))
         if "!" in label and "[" in label:
             links.extend(markdown_image_links(label, line_number, references))
-        index = closing + 1
+        index = next_index
     return links
 
 
@@ -1264,7 +1280,9 @@ def markdown_links(lines: list[tuple[int, str]]) -> list[tuple[int, str]]:
                 destination = markdown_link_destination(line, after + 1)
                 if destination:
                     links.append((line_number, destination[0]))
-                index += 1
+                    index = destination[1]
+                else:
+                    index += 1
                 continue
 
             reference = None

@@ -73,4 +73,16 @@ Describe 'Batch executable temporary-directory ownership' {
         $result.Output | Should -Not -Match 'local DisableDelayedExpansion'
         $result.Output | Should -Not -Match 'helpLinesMyTool'
     }
+
+    It 'prints a script basename literally when it contains command metacharacters' {
+        $toolPath = Join-Path $TestDrive 'myTool&echo INJECTED.cmd'
+        $tool = [IO.File]::ReadAllText($script:ExecutableTemplatePath, [Text.Encoding]::UTF8)
+        $tool = [regex]::Replace($tool, "`r`n|`r|`n", "`r`n")
+        [IO.File]::WriteAllText($toolPath, $tool, [Text.Encoding]::ASCII)
+        $output = @(& $env:ComSpec /d /c ('call "{0}" -v' -f $toolPath) 2>&1 |
+            ForEach-Object { "$_" })
+
+        $LASTEXITCODE | Should -Be 0
+        $output -join "`n" | Should -BeExactly 'myTool&echo INJECTED version 1.0.0'
+    }
 }
