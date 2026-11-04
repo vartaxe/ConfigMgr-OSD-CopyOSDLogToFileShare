@@ -11,6 +11,55 @@ SPEC.loader.exec_module(DOCS_DRIFT)
 
 
 class DocsDriftTests(unittest.TestCase):
+    def test_shell_heredoc_payload_is_not_scanned_as_commands(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            repo = Path(temp_dir)
+            (repo / "package.json").write_text(
+                '{"scripts": {"retained": "echo retained"}}\n',
+                encoding="utf-8")
+            nested = repo / "packages" / "web"
+            nested.mkdir(parents=True)
+            (nested / "package.json").write_text(
+                '{"scripts": {"web-only": "echo web"}}\n',
+                encoding="utf-8")
+            (repo / "README.md").write_text(
+                "```bash\n"
+                "cat <<'EOF'\n"
+                "npm run removed\n"
+                "cd packages/web\n"
+                "python missing.py\n"
+                "EOF\n"
+                "npm run retained\n"
+                "npm run removed-after\n"
+                "```\n",
+                encoding="utf-8")
+
+            result = DOCS_DRIFT.build(repo, [
+                "package.json", "packages/web/package.json", "README.md",
+            ])
+            missing = [
+                finding for finding in result["findings"]
+                if finding["kind"] == "missing-script"
+            ]
+
+            self.assertEqual(len(missing), 1)
+            self.assertEqual(missing[0]["line"], 8)
+            self.assertIn("removed-after", missing[0]["detail"])
+            self.assertNotIn(
+                "missing-script-file",
+                {finding["kind"] for finding in result["findings"]})
+
+    def test_make_target_allows_leading_spaces_but_not_recipe_lines(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            repo = Path(temp_dir)
+            (repo / "Makefile").write_text(
+                "  build:\n"
+                "\tfake:\n",
+                encoding="utf-8")
+
+            self.assertEqual(
+                DOCS_DRIFT.makefile_targets(repo, "Makefile"), {"build"})
+
     def test_go_getenv_and_lookupenv_prevent_unused_env_finding(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             repo = Path(temp_dir)

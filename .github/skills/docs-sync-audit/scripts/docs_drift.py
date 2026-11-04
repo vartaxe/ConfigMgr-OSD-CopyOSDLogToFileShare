@@ -336,6 +336,69 @@ def fenced_block_groups(text: str) -> list[list[tuple[int, str]]]:
     return groups
 
 
+def shell_heredoc_delimiters(line: str) -> list[tuple[str, bool]]:
+    """Return shell here-document delimiters and whether leading tabs are ignored."""
+    delimiters = []
+    quote = None
+    index = 0
+    while index < len(line):
+        char = line[index]
+        if quote:
+            if char == "\\" and quote != "'" and index + 1 < len(line):
+                index += 2
+            elif char == quote:
+                quote = None
+                index += 1
+            else:
+                index += 1
+        elif char == "\\":
+            index += 2
+        elif char in {'"', "'"}:
+            quote = char
+            index += 1
+        elif line.startswith("<<<", index):
+            index += 3
+        elif line.startswith("<<", index):
+            index += 2
+            strip_tabs = index < len(line) and line[index] == "-"
+            if strip_tabs:
+                index += 1
+            while index < len(line) and line[index].isspace():
+                index += 1
+            delimiter = []
+            delimiter_quote = None
+            while index < len(line):
+                char = line[index]
+                if delimiter_quote:
+                    if char == "\\" and delimiter_quote != "'" and index + 1 < len(line):
+                        delimiter.append(line[index + 1])
+                        index += 2
+                    elif char == delimiter_quote:
+                        delimiter_quote = None
+                        index += 1
+                    else:
+                        delimiter.append(char)
+                        index += 1
+                elif char == "\\" and index + 1 < len(line):
+                    delimiter.append(line[index + 1])
+                    index += 2
+                elif char in {'"', "'"}:
+                    delimiter_quote = char
+                    index += 1
+                elif char.isspace() or char in ";&|<>":
+                    break
+                else:
+                    delimiter.append(char)
+                    index += 1
+            if delimiter:
+                delimiters.append(("".join(delimiter), strip_tabs))
+        elif char == "#" and (index == 0 or line[index - 1].isspace()):
+            break
+        else:
+            index += 1
+    return delimiters
+
+
 def markdown_blockquote_content(line: str, depth: int | None = None) -> tuple[int, str]:
     """Strip up to ``depth`` blockquote prefixes and return their count and content."""
     content = line
@@ -393,7 +456,7 @@ def dynamic_directory_target(target: str) -> bool:
 def makefile_targets(repo: Path, rel: str) -> set[str]:
     """Read static target names from one Makefile inventory."""
     target_list = re.compile(
-        r"^([A-Za-z0-9][A-Za-z0-9_.-]*(?:[ \t]+[A-Za-z0-9][A-Za-z0-9_.-]*)*):(?!=)",
+        r"^ *([A-Za-z0-9][A-Za-z0-9_.-]*(?:[ \t]+[A-Za-z0-9][A-Za-z0-9_.-]*)*):(?!=)",
         re.M)
     return {target for match in target_list.finditer(read(repo / rel))
             for target in match.group(1).split()}
@@ -1860,7 +1923,14 @@ def build(repo: Path, files: list[str], check_paths: bool = False) -> dict:
             script_cwd = Path(".")
             script_directory_stack: list[Path] = []
             explicit_script_directory_change = False
+            pending_heredocs: list[tuple[str, bool]] = []
             for lineno, line in block:
+                if pending_heredocs:
+                    delimiter, strip_tabs = pending_heredocs[0]
+                    payload_line = line.lstrip("\t") if strip_tabs else line
+                    if payload_line == delimiter:
+                        pending_heredocs.pop(0)
+                    continue
                 npm_cwd, npm_calls = npm_commands_in_line(
                     repo, npm_scripts, line, npm_cwd, workspace_names,
                     npm_directory_stack)
@@ -1913,6 +1983,7 @@ def build(repo: Path, files: list[str], check_paths: bool = False) -> dict:
                     if not exists:
                         add("missing-script-file", "high", doc, lineno,
                             f"documents running `{candidate}`, which does not exist.")
+                pending_heredocs.extend(shell_heredoc_delimiters(line))
 
         # 2 and 3. links and backticked paths
         for i, target in markdown_links(markdown_lines_without_code(text)):
