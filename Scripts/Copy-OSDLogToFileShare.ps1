@@ -518,7 +518,7 @@ function Invoke-ArchiveCreation {
         [string]$ArchivePath
     )
 
-    [System.IO.Compression.ZipFile]::CreateFromDirectory($SourceFolder, $ArchivePath, [System.IO.Compression.CompressionLevel]::Optimal, $false)
+    [System.IO.Compression.ZipFile]::CreateFromDirectory($SourceFolder, $ArchivePath, [System.IO.Compression.CompressionLevel]::Fastest, $false)
 }
 
 function Confirm-SmbConnectionSecurity {

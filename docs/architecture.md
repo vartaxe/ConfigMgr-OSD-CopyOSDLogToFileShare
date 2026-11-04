@@ -21,7 +21,7 @@ title: Architecture
 2. Initialize `CopyOSDLogs.log`, read the three required custom variables, and construct an in-process `PSCredential`. Native task sequence steps own the variables' creation and deletion.
 3. Select the Windows volume and create a unique staging directory under `Windows\Temp\PendingOSDLogs`.
 4. Copy each source into `Content\<SourceName>`. A missing or unreadable optional source is recorded in the manifest, and collection continues.
-5. Write `_Meta\Manifest.json` and a snapshot of the dedicated log. Create the ZIP with .NET Framework `ZipFile.CreateFromDirectory`; an existing archive name is rejected without deleting its contents.
+5. Write `_Meta\Manifest.json` and a snapshot of the dedicated log. Create the ZIP with .NET Framework `ZipFile.CreateFromDirectory` using fastest compression to reduce task-sequence runtime; an existing archive name is rejected without deleting its contents.
 6. For each upload attempt, validate the UNC path and available SMB controls, then test TCP 445. Create a nonpersistent mapping, or use the explicitly approved PSDrive fallback. Inspect the connection before copying.
 7. Copy to the existing destination folder and compare remote and local byte sizes. Clear mapping arguments and remove only the connection created by this attempt in `finally`. A cleanup failure is not reported as successful delivery.
 8. After verified delivery, remove this run's staging directory and local ZIP. Return `0` only after those removals finish; otherwise return `1`. Native task sequence steps then clear credentials and propagate the saved result.
