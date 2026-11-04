@@ -1091,22 +1091,28 @@ def markdown_lines_without_code(text: str) -> list[tuple[int, str]]:
     fence_char = ""
     fence_length = 0
     fence_depth = 0
+    in_html_comment = False
     for i, line in enumerate(lines):
         depth, content = markdown_blockquote_content(line)
-        marker = MARKDOWN_FENCE.match(content)
         if fence_char:
+            marker = MARKDOWN_FENCE.match(content)
             if (depth == fence_depth and marker
                     and fence_closes(content, marker, fence_char, fence_length)):
                 fence_char = ""
                 fence_length = 0
                 fence_depth = 0
             fenced_lines[i] = True
-        elif marker:
+            continue
+        if content.startswith(("    ", "\t")):
+            fenced_lines[i] = True
+            continue
+        fence_content, in_html_comment = mask_markdown_html_comment_line(
+            content, in_html_comment)
+        marker = MARKDOWN_FENCE.match(fence_content)
+        if marker:
             fence_char = marker.group(1)[0]
             fence_length = len(marker.group(1))
             fence_depth = depth
-            fenced_lines[i] = True
-        elif content.startswith(("    ", "\t")):
             fenced_lines[i] = True
 
     cleaned_lines = [list(line) for line in lines]
@@ -1334,32 +1340,39 @@ def markdown_lines_without_html_comments(
     masked_lines = []
     in_comment = False
     for line_number, line in lines:
-        masked = list(line)
-        index = 0
-        while index < len(line):
-            if in_comment:
-                closing = line.find("-->", index)
-                if closing < 0:
-                    masked[index:] = [" "] * (len(line) - index)
-                    break
-                end = closing + 3
-                masked[index:end] = [" "] * (end - index)
-                index = end
-                in_comment = False
-            else:
-                start = line.find("<!--", index)
-                if start < 0:
-                    break
-                closing = line.find("-->", start + 4)
-                if closing < 0:
-                    masked[start:] = [" "] * (len(line) - start)
-                    in_comment = True
-                    break
-                end = closing + 3
-                masked[start:end] = [" "] * (end - start)
-                index = end
-        masked_lines.append((line_number, "".join(masked)))
+        masked, in_comment = mask_markdown_html_comment_line(line, in_comment)
+        masked_lines.append((line_number, masked))
     return masked_lines
+
+
+def mask_markdown_html_comment_line(
+        line: str, in_comment: bool) -> tuple[str, bool]:
+    """Mask HTML comment spans in one line and return the updated state."""
+    masked = list(line)
+    index = 0
+    while index < len(line):
+        if in_comment:
+            closing = line.find("-->", index)
+            if closing < 0:
+                masked[index:] = [" "] * (len(line) - index)
+                break
+            end = closing + 3
+            masked[index:end] = [" "] * (end - index)
+            index = end
+            in_comment = False
+        else:
+            start = line.find("<!--", index)
+            if start < 0:
+                break
+            closing = line.find("-->", start + 4)
+            if closing < 0:
+                masked[start:] = [" "] * (len(line) - start)
+                in_comment = True
+                break
+            end = closing + 3
+            masked[start:end] = [" "] * (end - start)
+            index = end
+    return "".join(masked), in_comment
 
 
 def markdown_links(lines: list[tuple[int, str]]) -> list[tuple[int, str]]:
@@ -1985,12 +1998,21 @@ def build(repo: Path, files: list[str], check_paths: bool = False) -> dict:
             script_directory_stack: list[Path] = []
             explicit_script_directory_change = False
             pending_heredocs: list[tuple[str, bool]] = []
+            pending_powershell_here_string: str | None = None
             for lineno, line in block:
                 if pending_heredocs:
                     delimiter, strip_tabs = pending_heredocs[0]
                     payload_line = line.lstrip("\t") if strip_tabs else line
                     if payload_line == delimiter:
                         pending_heredocs.pop(0)
+                    continue
+                if pending_powershell_here_string:
+                    if line.strip() == pending_powershell_here_string:
+                        pending_powershell_here_string = None
+                    continue
+                here_string = re.search(r"@(['\"])\s*$", line)
+                if here_string:
+                    pending_powershell_here_string = here_string.group(1) + "@"
                     continue
                 npm_cwd, npm_calls = npm_commands_in_line(
                     repo, npm_scripts, line, npm_cwd, workspace_names,

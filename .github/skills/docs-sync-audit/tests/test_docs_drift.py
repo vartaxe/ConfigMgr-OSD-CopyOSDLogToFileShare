@@ -412,6 +412,45 @@ continues inside this code span`
             self.assertEqual(broken[0]["line"], 4)
             self.assertIn("missing-visible.md", broken[0]["detail"])
 
+    def test_fence_markers_inside_html_comments_do_not_hide_later_links(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            repo = Path(temp_dir)
+            (repo / "README.md").write_text(
+                "<!--\n"
+                "```sh\n"
+                "[Masked](missing-comment.md)\n"
+                "-->\n"
+                "[Visible](missing-visible.md)\n",
+                encoding="utf-8")
+
+            result = DOCS_DRIFT.build(repo, ["README.md"])
+
+            broken = [
+                finding for finding in result["findings"]
+                if finding["kind"] == "broken-link"
+            ]
+            self.assertEqual(len(broken), 1)
+            self.assertEqual(broken[0]["line"], 5)
+            self.assertIn("missing-visible.md", broken[0]["detail"])
+
+    def test_powershell_here_string_contents_are_not_script_invocations(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            repo = Path(temp_dir)
+            (repo / "README.md").write_text(
+                "```powershell\n"
+                "$example = @'\n"
+                "python missing.py\n"
+                "[Example](missing.md)\n"
+                "'@\n"
+                "```\n",
+                encoding="utf-8")
+
+            result = DOCS_DRIFT.build(repo, ["README.md"])
+            finding_kinds = {finding["kind"] for finding in result["findings"]}
+
+            self.assertNotIn("missing-script-file", finding_kinds)
+            self.assertNotIn("broken-link", finding_kinds)
+
     def test_unparseable_markdown_link_is_skipped(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             repo = Path(temp_dir)
